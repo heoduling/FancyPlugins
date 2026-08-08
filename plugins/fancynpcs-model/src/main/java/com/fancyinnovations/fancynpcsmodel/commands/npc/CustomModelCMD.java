@@ -33,7 +33,11 @@ public class CustomModelCMD extends FancyContext {
             final @NotNull Npc npc,
             final @NotNull @Argument(suggestions = "CustomModelCMD/model") String model
     ) {
-        NpcAttribute customModelAttribute = FancyNpcsPlugin.get().getAttributeManager().getAttributeByName(EntityType.PLAYER, CustomModelAttribute.ATTRIBUTE_NAME);
+        NpcAttribute customModelAttribute = FancyNpcsPlugin.get().getAttributeManager().getAttributeByName(npc.getData().getType(), CustomModelAttribute.ATTRIBUTE_NAME);
+        if (customModelAttribute == null) {
+            translator.translate("command_unsupported_npc_type").withPrefix().send(sender);
+            return;
+        }
 
         if (model.equalsIgnoreCase("@none")) {
             npc.getData().removeAttribute(customModelAttribute);

@@ -23,4 +23,16 @@ allprojects {
         maven(url = "https://repo.papermc.io/repository/maven-public/")
 //        maven(url = "https://jitpack.io")
     }
+
+    configurations.configureEach {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "net.kyori"
+                && requested.name == "adventure-text-serializer-ansi"
+                && requested.version.isNullOrBlank()
+            ) {
+                useVersion("4.26.1")
+                because("the 1.21.11 dev bundle currently omits this transitive version")
+            }
+        }
+    }
 }

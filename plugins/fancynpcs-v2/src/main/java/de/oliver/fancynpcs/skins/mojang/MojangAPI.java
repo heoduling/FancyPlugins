@@ -17,6 +17,10 @@ import java.util.concurrent.Executor;
 
 public class MojangAPI {
 
+    private static final String SESSION_HOST = endpoint(
+            "minecraft.api.session.host",
+            "https://sessionserver.mojang.com"
+    );
     private final HttpClient client;
     private final Gson gson = new Gson();
 
@@ -32,17 +36,17 @@ public class MojangAPI {
 
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI("https://sessionserver.mojang.com/session/minecraft/profile/" + uuid + "?unsigned=false"))
+                    .uri(new URI(SESSION_HOST + "/session/minecraft/profile/" + uuid + "?unsigned=false"))
                     .GET()
                     .build();
 
             HttpResponse<String> resp = client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
+            if (resp.statusCode() == 429) {
+                throw new RatelimitException(System.currentTimeMillis() + 1000 * 10);
+            } else if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
                 FancyNpcsPlugin.get().getFancyLogger().warn("Failed to fetch skin from Mojang API for " + uuid + " (status code: " + resp.statusCode() + ")");
                 FancyNpcsPlugin.get().getFancyLogger().debug("Body: " + resp.body());
                 return null;
-            } else if (resp.statusCode() == 429) {
-                throw new RatelimitException(System.currentTimeMillis() + 1000 * 10); // retry in next run
             }
 
             RequestResponse response = gson.fromJson(resp.body(), RequestResponse.class);
@@ -64,6 +68,14 @@ public class MojangAPI {
             FancyNpcsPlugin.get().getFancyLogger().warn("Failed to fetch skin from Mojang API for " + uuid, ThrowableProperty.of(e));
             return null;
         }
+    }
+
+    private static String endpoint(String property, String fallback) {
+        String host = System.getProperty(property, fallback);
+        while (host.endsWith("/")) {
+            host = host.substring(0, host.length() - 1);
+        }
+        return host;
     }
 
     record RequestResponse(String id, String name, RequestResponseProperty[] properties) {

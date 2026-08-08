@@ -9,7 +9,9 @@ import com.fancyinnovations.fancynpcsmodel.fancynpcshook.CustomModelAttribute;
 import com.fancyinnovations.fancynpcsmodel.fancynpcshook.PlayAnimationLoopAction;
 import com.fancyinnovations.fancynpcsmodel.fancynpcshook.PlayAnimationOnceAction;
 import com.fancyinnovations.fancynpcsmodel.listeners.NpcInteractListener;
+import com.fancyinnovations.fancynpcsmodel.listeners.NpcModelVisibilityListener;
 import com.fancyinnovations.fancynpcsmodel.listeners.NpcRemoveListener;
+import com.fancyinnovations.fancynpcsmodel.listeners.NpcTransformListener;
 import com.fancyinnovations.fancynpcsmodel.metrics.FNMMetrics;
 import de.oliver.fancyanalytics.logger.ExtendedFancyLogger;
 import de.oliver.fancyanalytics.logger.LogLevel;
@@ -25,6 +27,9 @@ import de.oliver.fancylib.versionFetcher.FancySpacesVersionFetcher;
 import de.oliver.fancylib.versionFetcher.VersionFetcher;
 import de.oliver.fancynpcs.api.FancyNpcsPlugin;
 import de.oliver.fancynpcs.api.Npc;
+import kr.toxicity.model.api.BetterModel;
+import kr.toxicity.model.api.BetterModelPlatform;
+import kr.toxicity.model.api.event.PluginEndReloadEvent;
 import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -48,6 +53,7 @@ public class FancyNpcsModelPlugin extends JavaPlugin {
     private VersionConfig versionConfig;
     private Translator translator;
     private FNMMetrics metrics;
+    private NpcModelVisibilityListener npcModelVisibilityListener;
 
     public FancyNpcsModelPlugin() {
         INSTANCE = this;
@@ -143,6 +149,7 @@ public class FancyNpcsModelPlugin extends JavaPlugin {
         registerCommands();
 
         registerListeners();
+        registerBetterModelReloadSync();
 
         FancyNpcsPlugin.get().getAttributeManager().registerAttribute(CustomModelAttribute.getModelAttribute());
         FancyNpcsPlugin.get().getActionManager().registerAction(new PlayAnimationOnceAction());
@@ -179,7 +186,44 @@ public class FancyNpcsModelPlugin extends JavaPlugin {
 
     private void registerListeners() {
         Bukkit.getPluginManager().registerEvents(new NpcInteractListener(), this);
+        npcModelVisibilityListener = new NpcModelVisibilityListener();
+        Bukkit.getPluginManager().registerEvents(npcModelVisibilityListener, this);
         Bukkit.getPluginManager().registerEvents(new NpcRemoveListener(), this);
+        Bukkit.getPluginManager().registerEvents(new NpcTransformListener(), this);
+    }
+
+    private void registerBetterModelReloadSync() {
+        try {
+            BetterModel.eventBus().subscribe(this::isEnabled, PluginEndReloadEvent.class, event -> {
+                if (!(event.result() instanceof BetterModelPlatform.ReloadResult.Success)) {
+                    return;
+                }
+
+                Bukkit.getServer().getGlobalRegionScheduler().runDelayed(
+                        this,
+                        ignoredTask -> {
+                            for (Npc npc : FancyNpcsPlugin.get().getNpcManager().getAllNpcs()) {
+                                if (CustomModelAttribute.hasAttribute(npc)) {
+                                    CustomModelAttribute.resetTrackerForReload(npc);
+                                }
+                            }
+
+                            if (npcModelVisibilityListener != null) {
+                                npcModelVisibilityListener.scheduleOnlineModelSync(1L);
+                            }
+                        },
+                        5L
+                );
+            });
+        } catch (RuntimeException exception) {
+            fancyLogger.warn("Could not register BetterModel reload sync. Falling back to delayed player sync.");
+        }
+
+        Bukkit.getServer().getGlobalRegionScheduler().runDelayed(this, ignoredTask -> {
+            if (npcModelVisibilityListener != null) {
+                npcModelVisibilityListener.scheduleOnlineModelSync(1L);
+            }
+        }, 20L * 10);
     }
 
     public void registerTranslator() {

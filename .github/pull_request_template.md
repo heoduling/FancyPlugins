@@ -1,31 +1,23 @@
+## What changed
 
-## 📋 Description
+Describe the root cause and the smallest behavior change.
 
-Please include a summary of the changes and the related issue(s).  
-What is this PR solving? Why is it needed?
+## Scope
 
-## ✅ Checklist
+- [ ] FancyNpcs only
+- [ ] FancyNpcsModel only
+- [ ] Shared dependency required by one of those modules
 
-- [ ] My code follows the project's coding style and guidelines
-- [ ] I have tested my changes locally and they work as expected
-- [ ] I have added necessary documentation (if applicable)
-- [ ] I have linked related issues using `Fixes #issue_number` or `Closes #issue_number`
-- [ ] I have rebased/merged with the latest `main` branch
+## Folia safety
 
-## 🔍 Changes
+- [ ] No tick thread waits on network, file I/O, locks or futures
+- [ ] Bukkit/NPC state is accessed from its owning scheduler
+- [ ] Disable/reload cleanup was reviewed
 
-Please provide a brief summary of the changes made in this PR.
+## Validation
 
-- Updated ...
-- Refactored ...
-- Fixed ...
+- [ ] Relevant Gradle tasks pass
+- [ ] Luminol 1.21.11 startup and normal stop pass
+- [ ] FancyNpcs + FancyNpcsModel + BetterModel + SkinsRestorer smoke test passes
 
----
-
-## 🧪 How to Test
-
-Please describe how to manually test the changes made in this PR.
-
-1. ...
-2. ...
-3. ...
+List exact versions, commands, observed behavior and artifact hashes below.

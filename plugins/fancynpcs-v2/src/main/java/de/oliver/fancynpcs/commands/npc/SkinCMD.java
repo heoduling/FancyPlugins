@@ -24,11 +24,16 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 
 public enum SkinCMD {
     INSTANCE; // SINGLETON
 
     private final Translator translator = FancyNpcs.getInstance().getTranslator();
+    private final Map<String, UUID> pendingRequests = new ConcurrentHashMap<>();
 
     /* PARSERS AND SUGGESTIONS */
 
@@ -45,6 +50,8 @@ public enum SkinCMD {
             return;
         }
 
+        final String npcId = npc.getData().getId();
+        pendingRequests.remove(npcId);
         final boolean isMirror = skin.equalsIgnoreCase("@mirror");
         final boolean isNone = skin.equalsIgnoreCase("@none");
         if (isMirror) {
@@ -68,31 +75,108 @@ public enum SkinCMD {
             } else {
                 translator.translate("command_npc_modification_cancelled").withPrefix().send(sender);
             }
-        } else try {
+        } else {
             SkinData.SkinVariant variant = slim ? SkinData.SkinVariant.SLIM : SkinData.SkinVariant.AUTO;
-            SkinData skinData = FancyNpcs.getInstance().getSkinManagerImpl().getByIdentifier(skin, variant);
-            skinData.setIdentifier(skin);
+            UUID requestId = UUID.randomUUID();
+            UUID senderId = sender instanceof Player player ? player.getUniqueId() : null;
+            pendingRequests.put(npcId, requestId);
+            translator.translate("npc_skin_set_later").withPrefix().replace("npc", npc.getData().getName()).send(sender);
 
-            if (new NpcModifyEvent(npc, NpcModifyEvent.NpcModification.SKIN, false, sender).callEvent() && new NpcModifyEvent(npc, NpcModifyEvent.NpcModification.SKIN, skinData, sender).callEvent()) {
-                translator.translate("npc_skin_set")
-                        .withPrefix()
-                        .replace("npc", npc.getData().getName())
-                        .replace("name", skinData.getIdentifier())
-                        .send(sender);
-                if (!skinData.hasTexture()) {
-                    translator.translate("npc_skin_set_later").withPrefix().replace("npc", npc.getData().getName()).send(sender);
-                }
-                npc.getData().setMirrorSkin(false);
-                npc.getData().setSkinData(skinData);
-                npc.removeForAll();
-                npc.create();
-                npc.spawnForAll();
+            FancyNpcs.getInstance().getSkinManagerImpl()
+                    .getByIdentifierAsync(skin, variant)
+                    .whenComplete((skinData, error) -> scheduleResult(npcId, requestId, senderId, skin, skinData, error));
+        }
+    }
 
-            } else {
-                translator.translate("command_npc_modification_cancelled").withPrefix().send(sender);
+    private void scheduleResult(
+            String npcId,
+            UUID requestId,
+            UUID senderId,
+            String identifier,
+            SkinData skinData,
+            Throwable error
+    ) {
+        FancyNpcs plugin = FancyNpcs.getInstance();
+        if (!plugin.isEnabled()) {
+            return;
+        }
+
+        plugin.getServer().getGlobalRegionScheduler().run(plugin, task -> {
+            if (!plugin.isEnabled()) {
+                return;
             }
-        } catch (final SkinLoadException e) {
-            switch (e.getReason()) {
+
+            if (senderId != null) {
+                Player player = plugin.getServer().getPlayer(senderId);
+                if (player != null && player.isOnline()) {
+                    player.getScheduler().run(
+                            plugin,
+                            scheduledTask -> applyResult(npcId, requestId, player, identifier, skinData, error),
+                            null
+                    );
+                    return;
+                }
+            }
+
+            applyResult(npcId, requestId, plugin.getServer().getConsoleSender(), identifier, skinData, error);
+        });
+    }
+
+    private void applyResult(
+            String npcId,
+            UUID requestId,
+            CommandSender sender,
+            String identifier,
+            SkinData resolvedSkin,
+            Throwable error
+    ) {
+        if (!requestId.equals(pendingRequests.get(npcId))) {
+            return;
+        }
+        pendingRequests.remove(npcId, requestId);
+
+        Npc npc = FancyNpcs.getInstance().getNpcManager().getNpcById(npcId);
+        if (npc == null) {
+            return;
+        }
+
+        Throwable cause = unwrap(error);
+        if (cause != null) {
+            sendFailure(sender, npc, cause);
+            return;
+        }
+
+        SkinData skinData = new SkinData(
+                identifier,
+                resolvedSkin.getVariant(),
+                resolvedSkin.getTextureValue(),
+                resolvedSkin.getTextureSignature()
+        );
+        if (!new NpcModifyEvent(npc, NpcModifyEvent.NpcModification.SKIN, false, sender).callEvent()
+                || !new NpcModifyEvent(npc, NpcModifyEvent.NpcModification.SKIN, skinData, sender).callEvent()) {
+            translator.translate("command_npc_modification_cancelled").withPrefix().send(sender);
+            return;
+        }
+
+        npc.getData().setMirrorSkin(false);
+        npc.getData().setSkinData(skinData);
+        if (!skinData.hasTexture()) {
+            return;
+        }
+
+        translator.translate("npc_skin_set")
+                .withPrefix()
+                .replace("npc", npc.getData().getName())
+                .replace("name", skinData.getIdentifier())
+                .send(sender);
+        npc.removeForAll();
+        npc.create();
+        npc.spawnForAll();
+    }
+
+    private void sendFailure(CommandSender sender, Npc npc, Throwable error) {
+        if (error instanceof SkinLoadException skinLoadException) {
+            switch (skinLoadException.getReason()) {
                 case INVALID_URL ->
                         translator.translate("npc_skin_failure_invalid_url").withPrefix().replace("npc", npc.getData().getName()).send(sender);
                 case INVALID_FILE ->
@@ -102,7 +186,26 @@ public enum SkinCMD {
                 case INVALID_PLACEHOLDER ->
                         translator.translate("npc_skin_failure_invalid_placeholder").withPrefix().replace("npc", npc.getData().getName()).send(sender);
             }
+            return;
         }
+
+        FancyNpcs.getInstance().getFancyLogger().warn(
+                "Asynchronous skin lookup failed for NPC " + npc.getData().getName() + ": "
+                        + error.getClass().getSimpleName() + ": " + error.getMessage()
+        );
+        translator.translate("npc_skin_failure_invalid_username").withPrefix().replace("npc", npc.getData().getName()).send(sender);
+    }
+
+    private Throwable unwrap(Throwable error) {
+        Throwable cause = error;
+        while (cause instanceof CompletionException && cause.getCause() != null) {
+            cause = cause.getCause();
+        }
+        return cause;
+    }
+
+    public void shutdown() {
+        pendingRequests.clear();
     }
 
     /* UTILITY METHODS */

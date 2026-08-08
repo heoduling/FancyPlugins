@@ -20,6 +20,7 @@ allprojects {
         maven(url = "https://repo.extendedclip.com/releases/") // for PlaceholderAPI
         maven(url = "https://maven.enginehub.org/repo/") // for WorldEdit
         maven(url = "https://maven.citizensnpcs.co/repo") // for Citizens
+        maven(url = "https://repo.codemc.org/repository/maven-public/") // for SkinsRestorer
     }
 }
 
@@ -60,6 +61,7 @@ dependencies {
     compileOnly("net.citizensnpcs:citizens-main:2.0.42-SNAPSHOT") {
         exclude(group = "*", module = "*")
     }
+    compileOnly("net.skinsrestorer:skinsrestorer-api:15.12.4")
 }
 
 paper {
@@ -85,6 +87,10 @@ paper {
             load = PaperPluginDescription.RelativeLoadOrder.BEFORE
         }
         register("Citizens") {
+            required = false
+            load = PaperPluginDescription.RelativeLoadOrder.BEFORE
+        }
+        register("SkinsRestorer") {
             required = false
             load = PaperPluginDescription.RelativeLoadOrder.BEFORE
         }

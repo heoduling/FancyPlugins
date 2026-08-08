@@ -1,5 +1,10 @@
 # 
 
+> [!IMPORTANT]
+> This is a public maintenance fork of [FancyInnovations/FancyPlugins](https://github.com/FancyInnovations/FancyPlugins).
+> It keeps focused Folia/Luminol 1.21.11 fixes for **FancyNpcs** and **FancyNpcsModel**, including non-blocking skin lookup and BetterModel lifecycle/visibility integration.
+> See the [Chinese maintenance guide](docs/maintenance/FORK_MAINTENANCE_ZH.md) and [AI contributor instructions](AGENTS.md) before changing these modules.
+
 <div align="center">
 
 ![](docs/src/static/logos-and-banners/fancyinnovations-banner.png)
@@ -21,6 +26,13 @@
 ## FancyPlugins
 
 This is a [monorepo](docs/src/development-guidelines/monorepo.md) for all plugins, libraries, and tools of FancyInnovations.
+
+### Maintenance fork scope
+
+- Target runtime: Minecraft 1.21.11, Java 25, Folia/Luminol.
+- Maintained modules: `plugins/fancynpcs-v2` and `plugins/fancynpcs-model`.
+- Upstream remains the authority for unrelated FancyInnovations modules.
+- Tested binaries are published in this fork's GitHub Releases; do not install Gradle intermediate files.
 
 **Plugins:**
 - FancyNpcs: create and manage fancy looking npcs

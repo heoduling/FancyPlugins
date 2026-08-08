@@ -13,7 +13,13 @@ public class NpcInteractListener implements Listener {
             return;
         }
 
-        event.setCancelled(true);
+        if (!CustomModelAttribute.claimInteraction(
+                event.getNpc(),
+                event.getPlayer(),
+                event.getInteractionType()
+        )) {
+            event.setCancelled(true);
+        }
     }
 
 }

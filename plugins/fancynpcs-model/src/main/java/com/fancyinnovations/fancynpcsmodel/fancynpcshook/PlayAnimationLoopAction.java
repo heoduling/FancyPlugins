@@ -4,7 +4,7 @@ import com.fancyinnovations.fancynpcsmodel.main.FancyNpcsModelPlugin;
 import de.oliver.fancyanalytics.logger.properties.StringProperty;
 import de.oliver.fancynpcs.api.actions.NpcAction;
 import de.oliver.fancynpcs.api.actions.executor.ActionExecutionContext;
-import kr.toxicity.model.api.tracker.EntityTracker;
+import kr.toxicity.model.api.tracker.Tracker;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,7 +32,10 @@ public class PlayAnimationLoopAction extends NpcAction {
             return;
         }
 
-        EntityTracker tracker = CustomModelAttribute.getEntityTracker(context.getNpc());
+        Tracker tracker = CustomModelAttribute.getModelTracker(context.getNpc());
+        if (tracker == null) {
+            return;
+        }
 
         if (!tracker.animate(animation)) {
             FancyNpcsModelPlugin.get().getFancyLogger().warn(

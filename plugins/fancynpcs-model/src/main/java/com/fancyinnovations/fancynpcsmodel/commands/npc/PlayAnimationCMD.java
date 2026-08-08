@@ -4,7 +4,7 @@ import com.fancyinnovations.fancynpcsmodel.fancynpcshook.CustomModelAttribute;
 import com.fancyinnovations.fancynpcsmodel.utils.FancyContext;
 import de.oliver.fancynpcs.api.Npc;
 import kr.toxicity.model.api.animation.AnimationModifier;
-import kr.toxicity.model.api.tracker.EntityTracker;
+import kr.toxicity.model.api.tracker.Tracker;
 import org.bukkit.command.CommandSender;
 import org.incendo.cloud.annotations.Argument;
 import org.incendo.cloud.annotations.Command;
@@ -41,7 +41,15 @@ public class PlayAnimationCMD extends FancyContext {
             return;
         }
 
-        EntityTracker tracker = CustomModelAttribute.getEntityTracker(npc);
+        Tracker tracker = CustomModelAttribute.getModelTracker(npc);
+        if (tracker == null) {
+            translator.translate("commands.npc.play_animation.failed")
+                    .withPrefix()
+                    .replace("npc", npc.getData().getName())
+                    .replace("animation", animation)
+                    .send(sender);
+            return;
+        }
 
         AnimationModifier modifier = loop ? AnimationModifier.DEFAULT : AnimationModifier.DEFAULT_WITH_PLAY_ONCE;
         if (!tracker.animate(animation, modifier)) {
@@ -62,7 +70,7 @@ public class PlayAnimationCMD extends FancyContext {
 
     @Suggestions("PlayAnimationCMD/animation")
     public List<String> suggestAnimations(final CommandContext<CommandSender> context, final CommandInput input) {
-        EntityTracker tracker = CustomModelAttribute.getEntityTracker(context.get("npc"));
+        Tracker tracker = CustomModelAttribute.getModelTracker(context.get("npc"));
         if (tracker == null) return new ArrayList<>();
 
         return tracker.renderer().animations().keySet().stream().toList();

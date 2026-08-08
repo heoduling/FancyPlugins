@@ -33,6 +33,7 @@ import de.oliver.fancynpcs.api.actions.types.*;
 import de.oliver.fancynpcs.api.skins.SkinData;
 import de.oliver.fancynpcs.api.skins.SkinManager;
 import de.oliver.fancynpcs.commands.CloudCommandManager;
+import de.oliver.fancynpcs.commands.npc.SkinCMD;
 import de.oliver.fancynpcs.listeners.*;
 import de.oliver.fancynpcs.skins.SkinManagerImpl;
 import de.oliver.fancynpcs.skins.SkinUtils;
@@ -346,6 +347,12 @@ public class FancyNpcs extends JavaPlugin implements FancyNpcsPlugin {
     @Override
     public void onDisable() {
         getServer().getMessenger().unregisterOutgoingPluginChannel(this);
+        if (commandManager != null) {
+            SkinCMD.INSTANCE.shutdown();
+        }
+        if (skinManager != null) {
+            skinManager.shutdown();
+        }
         if (npcManager != null) {
             npcManager.saveNpcs(true);
         }
