@@ -32,6 +32,7 @@
 - BetterModel 模型碰撞箱的左右键会继续触发 FancyNpcs 动作，并去除重复事件。
 - NPC 移动、旋转、移除和 BetterModel 重载时清理或重建对应 tracker。
 - 插件停止时关闭全部模型 tracker。
+- FancyNpcsModel 启用时清理同名旧属性注册，停用时移除本次注册实例，防止单独热重载模型插件时 FancyNpcs 的属性列表逐代增长。
 
 ## 构建
 

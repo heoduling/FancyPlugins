@@ -107,5 +107,5 @@ val gitCommitMessage: Provider<String> = providers.exec {
 }.standardOutput.asText.map { it.trim() }
 
 fun getFNMVersion(): String {
-    return file("VERSION").readText()
+    return file("VERSION").readText().trim()
 }

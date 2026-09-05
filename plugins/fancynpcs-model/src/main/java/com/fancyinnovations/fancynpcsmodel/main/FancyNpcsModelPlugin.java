@@ -27,6 +27,7 @@ import de.oliver.fancylib.versionFetcher.FancySpacesVersionFetcher;
 import de.oliver.fancylib.versionFetcher.VersionFetcher;
 import de.oliver.fancynpcs.api.FancyNpcsPlugin;
 import de.oliver.fancynpcs.api.Npc;
+import de.oliver.fancynpcs.api.NpcAttribute;
 import kr.toxicity.model.api.BetterModel;
 import kr.toxicity.model.api.BetterModelPlatform;
 import kr.toxicity.model.api.event.PluginEndReloadEvent;
@@ -54,6 +55,7 @@ public class FancyNpcsModelPlugin extends JavaPlugin {
     private Translator translator;
     private FNMMetrics metrics;
     private NpcModelVisibilityListener npcModelVisibilityListener;
+    private NpcAttribute customModelAttribute;
 
     public FancyNpcsModelPlugin() {
         INSTANCE = this;
@@ -151,7 +153,12 @@ public class FancyNpcsModelPlugin extends JavaPlugin {
         registerListeners();
         registerBetterModelReloadSync();
 
-        FancyNpcsPlugin.get().getAttributeManager().registerAttribute(CustomModelAttribute.getModelAttribute());
+        var attributeManager = FancyNpcsPlugin.get().getAttributeManager();
+        attributeManager.getAllAttributes().removeIf(attribute ->
+                attribute.getName().equalsIgnoreCase(CustomModelAttribute.ATTRIBUTE_NAME)
+        );
+        customModelAttribute = CustomModelAttribute.getModelAttribute();
+        attributeManager.registerAttribute(customModelAttribute);
         FancyNpcsPlugin.get().getActionManager().registerAction(new PlayAnimationOnceAction());
         FancyNpcsPlugin.get().getActionManager().registerAction(new PlayAnimationLoopAction());
 
@@ -169,6 +176,11 @@ public class FancyNpcsModelPlugin extends JavaPlugin {
             if (CustomModelAttribute.hasAttribute(npc)) {
                 CustomModelAttribute.closeAllTrackers(npc);
             }
+        }
+
+        if (customModelAttribute != null) {
+            FancyNpcsPlugin.get().getAttributeManager().getAllAttributes().remove(customModelAttribute);
+            customModelAttribute = null;
         }
 
         fancyLogger.info("Successfully disabled FancyNpcsModel version %s".formatted(getDescription().getVersion()));
