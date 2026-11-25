@@ -1,6 +1,8 @@
 package com.fancyinnovations.fancynpcsmodel.commands.npc;
 
 import com.fancyinnovations.fancynpcsmodel.fancynpcshook.CustomModelAttribute;
+import com.fancyinnovations.fancynpcsmodel.fancynpcshook.ModelAnimationModes;
+import com.fancyinnovations.fancynpcsmodel.integration.NpcModelSession;
 import com.fancyinnovations.fancynpcsmodel.utils.FancyContext;
 import de.oliver.fancynpcs.api.Npc;
 import kr.toxicity.model.api.animation.AnimationModifier;
@@ -15,7 +17,6 @@ import org.incendo.cloud.context.CommandContext;
 import org.incendo.cloud.context.CommandInput;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class PlayAnimationCMD extends FancyContext {
@@ -33,6 +34,11 @@ public class PlayAnimationCMD extends FancyContext {
             final @NotNull @Argument(suggestions = "PlayAnimationCMD/animation") String animation,
             final @Flag("loop") boolean loop
     ) {
+        if (!NpcModelSession.isActive()) {
+            requireActive(sender);
+            return;
+        }
+        var translator = translator();
         if (!CustomModelAttribute.hasAttribute(npc)) {
             translator.translate("commands.npc.play_animation.no_model_assigned")
                     .withPrefix()
@@ -51,7 +57,7 @@ public class PlayAnimationCMD extends FancyContext {
             return;
         }
 
-        AnimationModifier modifier = loop ? AnimationModifier.DEFAULT : AnimationModifier.DEFAULT_WITH_PLAY_ONCE;
+        AnimationModifier modifier = loop ? ModelAnimationModes.LOOP : AnimationModifier.DEFAULT_WITH_PLAY_ONCE;
         if (!tracker.animate(animation, modifier)) {
             translator.translate("commands.npc.play_animation.failed")
                     .withPrefix()
@@ -70,9 +76,11 @@ public class PlayAnimationCMD extends FancyContext {
 
     @Suggestions("PlayAnimationCMD/animation")
     public List<String> suggestAnimations(final CommandContext<CommandSender> context, final CommandInput input) {
-        Tracker tracker = CustomModelAttribute.getModelTracker(context.get("npc"));
-        if (tracker == null) return new ArrayList<>();
+        return NpcModelSession.isActive() ? animationNames(context.get("npc")) : List.of();
+    }
 
-        return tracker.renderer().animations().keySet().stream().toList();
+    public static List<String> animationNames(Npc npc) {
+        Tracker tracker = CustomModelAttribute.getExistingModelTracker(npc);
+        return tracker == null ? List.of() : List.copyOf(tracker.renderer().animations().keySet());
     }
 }

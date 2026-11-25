@@ -1,0 +1,40 @@
+language_name: "简体中文"
+messages:
+  command_unsupported_npc_type: "{errorColor}此 NPC 类型不支持自定义模型。"
+  common:
+    integration_inactive: "{errorColor}模型功能未启用，请重启服务器以重新连接。"
+    no_permission: "{errorColor}你没有权限使用此命令。"
+    npc_not_found: "{errorColor}找不到 NPC：{primaryColor}{npc}{secondaryColor}。"
+    model_not_found: "{errorColor}找不到模型：{primaryColor}{model}{secondaryColor}。"
+  commands:
+    fancynpcsmodel:
+      usage: "用法：/{label} <version|config show|config reload|public>"
+      public:
+        usage: "用法：/fancynpcsmodel public [NPC 名称或内部编号] [on|off|status]"
+        ambiguous: "{errorColor}存在同名 NPC，请使用对应的内部编号。"
+        upgrade_pending: "{warningColor}正在核对旧版公开设置，请稍后重试。"
+        enabled: "已为 NPC {primaryColor}{npc}{secondaryColor} 开启公开模型交互，访客可触发已配置的动作。"
+        disabled: "已为 NPC {primaryColor}{npc}{secondaryColor} 关闭公开模型交互，领地规则照常生效。"
+        failed: "{errorColor}无法保存 NPC {npc} 的公开交互设置，请检查服务器日志并重试。"
+      version:
+        current_version: "当前运行的是 FancyNpcsModel {primaryColor}v{version}{secondaryColor}。"
+        version_outdated: "当前版本较旧，请更新到 FancyNpcsModel {primaryColor}v{latestVersion}{secondaryColor}（{downloadURL}）。"
+      config:
+        reload:
+          confirmation: "{warningColor}确定要重新加载配置吗？这会应用配置文件中的更改。"
+          success: "配置已重新加载。"
+          cancelled: "已取消重新加载配置。"
+        show:
+          settings_header: "FancyNpcsModel 设置："
+          experimental_header: "FancyNpcsModel 实验性功能："
+          entry: "{secondaryColor} - {path}：{primaryColor}{value} {secondaryColor}（默认值：{default}）"
+    npc:
+      custom_model:
+        usage: "用法：/npc custom_model [NPC 名称] [模型名称]"
+        applied: "已为 NPC {primaryColor}{npc}{secondaryColor} 设置模型 {primaryColor}{model}{secondaryColor}。"
+        removed: "已移除 NPC {primaryColor}{npc}{secondaryColor} 的自定义模型。"
+      play_animation:
+        usage: "用法：/npc play_animation [NPC 名称] [动画名称] [--loop]"
+        no_model_assigned: "{errorColor}NPC {primaryColor}{npc}{secondaryColor} 尚未设置自定义模型。"
+        failed: "{errorColor}无法为 NPC {primaryColor}{npc}{errorColor} 播放动画 {primaryColor}{animation}{secondaryColor}。"
+        playing: "正在为 NPC {primaryColor}{npc}{secondaryColor} 播放动画 {primaryColor}{animation}{secondaryColor}。"

@@ -1,6 +1,7 @@
 package com.fancyinnovations.fancynpcsmodel.fancynpcshook;
 
 import com.fancyinnovations.fancynpcsmodel.main.FancyNpcsModelPlugin;
+import com.fancyinnovations.fancynpcsmodel.integration.NpcModelSession;
 import de.oliver.fancyanalytics.logger.properties.StringProperty;
 import de.oliver.fancynpcs.api.actions.NpcAction;
 import de.oliver.fancynpcs.api.actions.executor.ActionExecutionContext;
@@ -17,6 +18,9 @@ public class PlayAnimationOnceAction extends NpcAction {
 
     @Override
     public void execute(@NotNull ActionExecutionContext context, @Nullable String animation) {
+        if (!NpcModelSession.isActive()) {
+            return;
+        }
         if (animation == null || animation.isEmpty()) {
             return;
         }

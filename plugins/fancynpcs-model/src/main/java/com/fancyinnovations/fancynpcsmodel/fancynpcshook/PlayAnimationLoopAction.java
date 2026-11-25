@@ -1,6 +1,7 @@
 package com.fancyinnovations.fancynpcsmodel.fancynpcshook;
 
 import com.fancyinnovations.fancynpcsmodel.main.FancyNpcsModelPlugin;
+import com.fancyinnovations.fancynpcsmodel.integration.NpcModelSession;
 import de.oliver.fancyanalytics.logger.properties.StringProperty;
 import de.oliver.fancynpcs.api.actions.NpcAction;
 import de.oliver.fancynpcs.api.actions.executor.ActionExecutionContext;
@@ -16,6 +17,9 @@ public class PlayAnimationLoopAction extends NpcAction {
 
     @Override
     public void execute(@NotNull ActionExecutionContext context, @Nullable String animation) {
+        if (!NpcModelSession.isActive()) {
+            return;
+        }
         if (animation == null || animation.isEmpty()) {
             return;
         }
@@ -37,7 +41,7 @@ public class PlayAnimationLoopAction extends NpcAction {
             return;
         }
 
-        if (!tracker.animate(animation)) {
+        if (!tracker.animate(animation, ModelAnimationModes.LOOP)) {
             FancyNpcsModelPlugin.get().getFancyLogger().warn(
                     "Failed to play animation",
                     StringProperty.of("npc", context.getNpc().getData().getName()),

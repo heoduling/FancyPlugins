@@ -1,9 +1,21 @@
 language_name: default
 messages:
+  command_unsupported_npc_type: "{errorColor}This NPC type does not support custom models."
   common:
+    integration_inactive: "{errorColor}Model integration is inactive. Restart the server to reconnect it."
+    no_permission: "{errorColor}You do not have permission to use this command."
+    npc_not_found: "{errorColor}NPC not found: {primaryColor}{npc}{secondaryColor}"
     model_not_found: "{errorColor}Could not find model with name {primaryColor}{model}{secondaryColor}."
   commands:
     fancynpcsmodel:
+      usage: "/{label} <version|config show|config reload|public>"
+      public:
+        usage: "Usage: /fancynpcsmodel public [NPC name or internal ID] [on|off|status]"
+        ambiguous: "{errorColor}More than one NPC has that name. Use its internal ID."
+        upgrade_pending: "{warningColor}The old public access settings are being checked. Please try again shortly."
+        enabled: "Public model interaction is enabled for NPC {primaryColor}{npc}{secondaryColor}. Visitors may trigger its configured actions."
+        disabled: "Public model interaction is disabled for NPC {primaryColor}{npc}{secondaryColor}. Land protection applies normally."
+        failed: "{errorColor}Could not save public interaction for NPC {npc}. Check the server log and try again."
       version:
         current_version: "You are running FancyNpcsModel {primaryColor}v{version}{secondaryColor}."
         version_outdated: "You are running an outdated version of FancyNpcsModel. Please update to the latest version {primaryColor}v{latestVersion}{secondaryColor}({downloadURL})."
@@ -18,9 +30,11 @@ messages:
           entry: "{secondaryColor} - {path}: {primaryColor}{value} {secondaryColor}(default: {default})"
     npc:
       custom_model:
+        usage: "/npc custom_model <npc> <model>"
         applied: "Custom model {primaryColor}{model}{secondaryColor} applied to NPC {primaryColor}{npc}{secondaryColor}."
         removed: "Custom model removed from NPC {primaryColor}{npc}{secondaryColor}."
       play_animation:
+        usage: "/npc play_animation <npc> <animation> [--loop]"
         no_model_assigned: "{errorColor}NPC {primaryColor}{npc}{secondaryColor} does not have a custom model assigned."
         failed: "{errorColor}Failed to play animation {primaryColor}{animation}{errorColor} on NPC {primaryColor}{npc}{secondaryColor}."
         playing: "Playing animation {primaryColor}{animation}{secondaryColor} on NPC {primaryColor}{npc}{secondaryColor}."

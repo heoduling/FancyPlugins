@@ -1,0 +1,8 @@
+# Compatibility metadata for PlugManX discovery. Paper still uses paper-plugin.yml.
+name: "FancyNpcsModel"
+main: "com.fancyinnovations.fancynpcsmodel.main.FancyNpcsModelPlugin"
+version: "$version"
+api-version: "26.1.2"
+load: POSTWORLD
+folia-supported: true
+depend: [FancyNpcs, BetterModel]

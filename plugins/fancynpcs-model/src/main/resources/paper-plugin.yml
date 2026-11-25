@@ -1,7 +1,5 @@
 name: "FancyNpcsModel"
 main: "com.fancyinnovations.fancynpcsmodel.main.FancyNpcsModelPlugin"
-bootstrapper: "com.fancyinnovations.fancynpcsmodel.main.FancyNpcsModelBootstrapper"
-loader: "com.fancyinnovations.fancynpcsmodel.main.FancyNpcsModelLoader"
 version: "$version"
 description: "Addon for FancyNpcs that adds support for custom models"
 website: "https://fancyinnovations.com/docs/minecraft-plugins/fancynpcs"
@@ -15,7 +13,7 @@ dependencies:
     FancyNpcs:
       load: BEFORE
       required: true
-      join-classpath: true
+      join-classpath: false
     BetterModel:
       load: BEFORE
       required: true

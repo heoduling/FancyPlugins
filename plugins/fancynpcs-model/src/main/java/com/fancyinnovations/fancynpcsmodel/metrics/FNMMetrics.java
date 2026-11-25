@@ -1,20 +1,15 @@
 package com.fancyinnovations.fancynpcsmodel.metrics;
 
-import com.fancyinnovations.fancynpcsmodel.fancynpcshook.CustomModelAttribute;
 import com.fancyinnovations.fancynpcsmodel.main.FancyNpcsModelPlugin;
 import de.oliver.fancyanalytics.api.FancyAnalyticsAPI;
 import de.oliver.fancyanalytics.api.metrics.MetricSupplier;
 import de.oliver.fancyanalytics.logger.ExtendedFancyLogger;
 import de.oliver.fancyanalytics.sdk.events.Event;
 import de.oliver.fancylib.VersionConfig;
-import de.oliver.fancynpcs.api.FancyNpcsPlugin;
-import de.oliver.fancynpcs.api.Npc;
 import org.bukkit.Bukkit;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.util.HashMap;
+import java.util.logging.Logger;
 
 public class FNMMetrics {
 
@@ -58,60 +53,37 @@ public class FNMMetrics {
             return "very_large";
         }));
 
-        fancyAnalytics.registerNumberMetric(new MetricSupplier<>("amount_npcs_with_custom_model", () -> {
-            double counter = 0;
-
-            for (Npc npc : FancyNpcsPlugin.get().getNpcManager().getAllNpcs()) {
-                if (CustomModelAttribute.hasAttribute(npc)) {
-                    counter++;
-                }
-            }
-
-            return counter;
-        }));
+        fancyAnalytics.registerNumberMetric(new MetricSupplier<>("amount_npcs_with_custom_model",
+                () -> (double) FancyNpcsModelPlugin.get().modelCount()));
 
         fancyAnalytics.initialize();
     }
 
-    public void checkIfPluginVersionUpdated() {
+    public void detachErrorLogging() {
+        if (fancyAnalytics == null) {
+            return;
+        }
+
+        fancyAnalytics.getConfig().sendErrors(false);
+        fancyAnalytics.getConfig().setSendMetrics(false);
+        var handler = fancyAnalytics.getExceptionHandler();
+        FancyNpcsModelPlugin.get().getLogger().removeHandler(handler);
+        Bukkit.getLogger().removeHandler(handler);
+        Logger.getGlobal().removeHandler(handler);
+    }
+
+    public void reportPluginVersionUpdated(String lastVersion) {
         VersionConfig versionConfig = FancyNpcsModelPlugin.get().getVersionConfig();
         String currentVersion = versionConfig.getVersion();
-        String lastVersion = "N/A";
-
-        File versionFile = new File(FancyNpcsModelPlugin.get().getDataFolder(), "version.yml");
-        if (!versionFile.exists()) {
-            try {
-                Files.write(versionFile.toPath(), currentVersion.getBytes());
-            } catch (IOException e) {
-                logger.warn("Could not write version file.");
-                return;
-            }
-        } else {
-            try {
-                lastVersion = new String(Files.readAllBytes(versionFile.toPath()));
-            } catch (IOException e) {
-                logger.warn("Could not read version file.");
-                return;
-            }
-        }
-
-        if (!lastVersion.equals(currentVersion)) {
-            logger.info("Plugin has been updated from version " + lastVersion + " to " + currentVersion + ".");
-            fancyAnalytics.sendEvent(
-                    new Event("PluginVersionUpdated", new HashMap<>())
-                            .withProperty("from", lastVersion)
-                            .withProperty("to", currentVersion)
-                            .withProperty("commit_hash", versionConfig.getCommitHash())
-                            .withProperty("channel", versionConfig.getChannel())
-                            .withProperty("platform", versionConfig.getPlatform())
-            );
-
-            try {
-                Files.write(versionFile.toPath(), currentVersion.getBytes());
-            } catch (IOException e) {
-                logger.warn("Could not write version file.");
-            }
-        }
+        logger.info("Plugin has been updated from version " + lastVersion + " to " + currentVersion + ".");
+        fancyAnalytics.sendEvent(
+                new Event("PluginVersionUpdated", new HashMap<>())
+                        .withProperty("from", lastVersion)
+                        .withProperty("to", currentVersion)
+                        .withProperty("commit_hash", versionConfig.getCommitHash())
+                        .withProperty("channel", versionConfig.getChannel())
+                        .withProperty("platform", versionConfig.getPlatform())
+        );
     }
 
     public FancyAnalyticsAPI getFancyAnalytics() {

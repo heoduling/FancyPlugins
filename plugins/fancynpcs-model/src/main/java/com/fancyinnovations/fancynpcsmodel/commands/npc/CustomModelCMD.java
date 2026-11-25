@@ -1,6 +1,7 @@
 package com.fancyinnovations.fancynpcsmodel.commands.npc;
 
 import com.fancyinnovations.fancynpcsmodel.fancynpcshook.CustomModelAttribute;
+import com.fancyinnovations.fancynpcsmodel.integration.NpcModelSession;
 import com.fancyinnovations.fancynpcsmodel.utils.FancyContext;
 import de.oliver.fancynpcs.api.FancyNpcsPlugin;
 import de.oliver.fancynpcs.api.Npc;
@@ -33,7 +34,13 @@ public class CustomModelCMD extends FancyContext {
             final @NotNull Npc npc,
             final @NotNull @Argument(suggestions = "CustomModelCMD/model") String model
     ) {
-        NpcAttribute customModelAttribute = FancyNpcsPlugin.get().getAttributeManager().getAttributeByName(npc.getData().getType(), CustomModelAttribute.ATTRIBUTE_NAME);
+        FancyNpcsPlugin fancyNpcs = NpcModelSession.activeHost();
+        if (fancyNpcs == null) {
+            requireActive(sender);
+            return;
+        }
+        var translator = translator();
+        NpcAttribute customModelAttribute = fancyNpcs.getAttributeManager().getAttributeByName(npc.getData().getType(), CustomModelAttribute.ATTRIBUTE_NAME);
         if (customModelAttribute == null) {
             translator.translate("command_unsupported_npc_type").withPrefix().send(sender);
             return;
@@ -73,9 +80,13 @@ public class CustomModelCMD extends FancyContext {
 
     @Suggestions("CustomModelCMD/model")
     public List<String> suggestModels(final CommandContext<CommandSender> context, final CommandInput input) {
-        return new ArrayList<>() {{
-            add("@none");
-            addAll(BetterModel.modelKeys());
-        }};
+        return NpcModelSession.isActive() ? modelNames() : List.of();
+    }
+
+    public static List<String> modelNames() {
+        var names = new ArrayList<String>();
+        names.add("@none");
+        names.addAll(BetterModel.modelKeys());
+        return names;
     }
 }

@@ -4,8 +4,6 @@ import com.fancyinnovations.config.ConfigField;
 import com.fancyinnovations.fancynpcsmodel.utils.FancyContext;
 import de.oliver.fancyanalytics.logger.LogLevel;
 import org.bukkit.command.CommandSender;
-import org.incendo.cloud.annotations.Command;
-import org.incendo.cloud.annotations.Permission;
 
 import java.util.Collection;
 import java.util.Comparator;
@@ -17,25 +15,28 @@ public class FNMConfigCMD extends FancyContext {
     private FNMConfigCMD() {
     }
 
-    @Command("fancynpcsmodel config reload")
-    @Permission("fancynpcsmodel.commands.fancynpcsmodel.config.reload")
     public void configReload(
             CommandSender sender
     ) {
+        if (!requireActive(sender)) {
+            return;
+        }
         config.reload();
         logger.setCurrentLevel(LogLevel.valueOf(config.getLogLevel()));
         plugin.registerTranslator();
 
-        translator.translate("commands.fancynpcsmodel.config.reload.success")
+        translator().translate("commands.fancynpcsmodel.config.reload.success")
                 .withPrefix()
                 .send(sender);
     }
 
-    @Command("fancynpcsmodel config show")
-    @Permission("fancynpcsmodel.commands.fancynpcsmodel.config.show")
     public void show(
             CommandSender sender
     ) {
+        if (!requireActive(sender)) {
+            return;
+        }
+        var translator = translator();
         Collection<ConfigField<?>> fields = config.getConfig().getFields().values()
                 .stream()
                 .sorted(Comparator.comparing(ConfigField::path))

@@ -10,6 +10,7 @@ public class FancyNpcsModelConfigImpl {
     public static final String MUTE_VERSION_NOTIFICATION_PATH = "settings.logging.version_notification";
 
     public static final String LANGUAGE_PATH = "settings.language";
+    public static final String DEFAULT_LANGUAGE = "zh_cn";
 
     private static final String CONFIG_FILE_PATH = "plugins/FancyNpcsModel/config.yml";
 
@@ -38,9 +39,9 @@ public class FancyNpcsModelConfigImpl {
 
         config.addField(new ConfigField<>(
                 LANGUAGE_PATH,
-                "The language for the plugin.",
+                "Plugin language: zh_cn (Simplified Chinese), en_us (English), or a language from the languages folder.",
                 false,
-                "default",
+                DEFAULT_LANGUAGE,
                 false,
                 String.class
         ));

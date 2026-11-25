@@ -55,9 +55,21 @@ tasks {
     }
 
     shadowJar {
+        val lifecyclePatch = layout.projectDirectory.file("build-support/ModelLoggingPatch.java")
+        val java25 = project.extensions.getByType<JavaToolchainService>().launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(25))
+        }
+        val artifact = archiveFile
+        inputs.file(lifecyclePatch)
         relocate("org.incendo", "de.oliver")
         archiveClassifier.set("")
         archiveBaseName.set("FancyNpcsModel")
+        doLast {
+            providers.exec {
+                executable = java25.get().executablePath.asFile.absolutePath
+                args(lifecyclePatch.asFile.absolutePath, artifact.get().asFile.absolutePath)
+            }.result.get().assertNormalExitValue()
+        }
     }
 
     compileJava {
@@ -84,11 +96,7 @@ tasks {
 
         inputs.properties(props)
 
-        filesMatching("paper-plugin.yml") {
-            expand(props)
-        }
-
-        filesMatching("version.yml") {
+        filesMatching(listOf("paper-plugin.yml", "plugin.yml", "version.yml")) {
             expand(props)
         }
     }
