@@ -43,7 +43,7 @@ public class NpcData {
     private int visibilityDistance;
     private Map<NpcAttribute, String> attributes;
     private NpcVisibility visibility;
-    private boolean isDirty;
+    private volatile boolean isDirty;
 
     public NpcData(
             String id,
@@ -383,12 +383,13 @@ public class NpcData {
     }
 
     public void addAttribute(NpcAttribute attribute, String value) {
+        attributes.keySet().removeIf(key -> key != attribute && key.getName().equalsIgnoreCase(attribute.getName()));
         attributes.put(attribute, value);
         isDirty = true;
     }
 
     public void removeAttribute(NpcAttribute attribute) {
-        attributes.remove(attribute);
+        attributes.keySet().removeIf(key -> key.getName().equalsIgnoreCase(attribute.getName()));
         isDirty = true;
     }
 

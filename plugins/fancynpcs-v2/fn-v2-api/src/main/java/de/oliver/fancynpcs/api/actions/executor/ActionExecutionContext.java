@@ -11,6 +11,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * Context for executing a sequence of NPC actions initiated by different triggers.
@@ -54,6 +55,7 @@ public class ActionExecutionContext {
      * </p>
      */
     private int actionIndex;
+    private Consumer<String> consoleCommandDispatcher;
 
     /**
      * Constructs an ActionExecutionContext with the specified ActionTrigger, Npc, and an optional Player.
@@ -79,6 +81,14 @@ public class ActionExecutionContext {
      */
     public ActionExecutionContext(ActionTrigger trigger, Npc npc) {
         this(trigger, npc, null);
+    }
+
+    /** Dispatches a console action from the server's global scheduler. */
+    public void dispatchConsoleCommand(String command) {
+        if (consoleCommandDispatcher == null) {
+            consoleCommandDispatcher = npc.createConsoleCommandDispatcher();
+        }
+        consoleCommandDispatcher.accept(command);
     }
 
     /**

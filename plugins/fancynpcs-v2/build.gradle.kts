@@ -1,4 +1,5 @@
 import net.minecrell.pluginyml.paper.PaperPluginDescription
+import org.gradle.jvm.toolchain.JavaToolchainService
 
 plugins {
     id("java-library")
@@ -9,6 +10,12 @@ plugins {
 }
 
 runPaper.folia.registerTask()
+
+val pluginName = "FancyNpcs"
+val pluginMain = "de.oliver.fancynpcs.FancyNpcs"
+val pluginApiVersion = "1.19"
+val pluginFoliaSupported = true
+val optionalServerDependencies = listOf("PlaceholderAPI", "MiniPlaceholders", "PlotSquared", "Citizens", "SkinsRestorer")
 
 allprojects {
     group = "de.oliver"
@@ -65,34 +72,19 @@ dependencies {
 }
 
 paper {
-    name = "FancyNpcs"
-    main = "de.oliver.fancynpcs.FancyNpcs"
-    bootstrapper = "de.oliver.fancynpcs.loaders.FancyNpcsBootstrapper"
+    name = pluginName
+    main = pluginMain
     loader = "de.oliver.fancynpcs.loaders.FancyNpcsLoader"
-    foliaSupported = true
-    version = getFNVersion()
+    foliaSupported = pluginFoliaSupported
+    version = project.version.toString()
     description = "Simple, lightweight and fast NPC plugin using packets"
-    apiVersion = "1.19"
+    apiVersion = pluginApiVersion
     serverDependencies {
-        register("PlaceholderAPI") {
-            required = false
-            load = PaperPluginDescription.RelativeLoadOrder.BEFORE
-        }
-        register("MiniPlaceholders") {
-            required = false
-            load = PaperPluginDescription.RelativeLoadOrder.BEFORE
-        }
-        register("PlotSquared") {
-            required = false
-            load = PaperPluginDescription.RelativeLoadOrder.BEFORE
-        }
-        register("Citizens") {
-            required = false
-            load = PaperPluginDescription.RelativeLoadOrder.BEFORE
-        }
-        register("SkinsRestorer") {
-            required = false
-            load = PaperPluginDescription.RelativeLoadOrder.BEFORE
+        for (dependency in optionalServerDependencies) {
+            register(dependency) {
+                required = false
+                load = PaperPluginDescription.RelativeLoadOrder.BEFORE
+            }
         }
     }
 }
@@ -118,11 +110,24 @@ tasks {
     }
 
     shadowJar {
+        val shadedPatch = rootProject.layout.projectDirectory.file("build-support/FancyNpcsShadedPatch.java")
+        val gradleLibraries = gradle.gradleHomeDir!!.resolve("lib/*")
+        val java25 = project.extensions.getByType<JavaToolchainService>().launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(25))
+        }
+        val artifact = archiveFile
+        inputs.file(shadedPatch)
         relocate("org.incendo", "de.oliver")
         relocate("org.lushplugins.chatcolorhandler", "de.oliver.fancynpcs.libs.chatcolorhandler")
         archiveClassifier.set("")
-        archiveBaseName.set("FancyNpcs")
+        archiveBaseName.set(pluginName)
         dependsOn(":plugins:fancynpcs-v2:fn-v2-api:shadowJar")
+        doLast {
+            providers.exec {
+                executable = java25.get().executablePath.asFile.absolutePath
+                args("-cp", gradleLibraries.absolutePath, shadedPatch.asFile.absolutePath, artifact.get().asFile.absolutePath)
+            }.result.get().assertNormalExitValue()
+        }
     }
 
     publishing {
@@ -173,19 +178,21 @@ tasks {
 
         val props = mapOf(
             "description" to project.description,
-            "version" to getFNVersion(),
+            "version" to project.version.toString(),
             "commit_hash" to gitCommitHash.get(),
             "channel" to (System.getenv("RELEASE_CHANNEL") ?: "").ifEmpty { "undefined" },
-            "platform" to (System.getenv("RELEASE_PLATFORM") ?: "").ifEmpty { "undefined" }
+            "platform" to (System.getenv("RELEASE_PLATFORM") ?: "").ifEmpty { "undefined" },
+            "name" to pluginName,
+            "main" to pluginMain,
+            "apiVersion" to pluginApiVersion,
+            "foliaSupported" to pluginFoliaSupported,
+            "softDependencies" to optionalServerDependencies.joinToString(", ")
         )
 
         inputs.properties(props)
 
-        filesMatching("paper-plugin.yml") {
-            expand(props)
-        }
-
-        filesMatching("version.yml") {
+        // PlugManX's load suggestions read the Bukkit descriptor, even for Paper plugins.
+        filesMatching(listOf("paper-plugin.yml", "plugin.yml", "version.yml")) {
             expand(props)
         }
     }
@@ -204,5 +211,5 @@ val gitCommitMessage: Provider<String> = providers.exec {
 }.standardOutput.asText.map { it.trim() }
 
 fun getFNVersion(): String {
-    return file("VERSION").readText()
+    return file("VERSION").readText().trim()
 }

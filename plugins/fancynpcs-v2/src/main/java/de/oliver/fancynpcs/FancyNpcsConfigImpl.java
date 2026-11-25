@@ -108,8 +108,8 @@ public class FancyNpcsConfigImpl implements FancyNpcsConfig {
         FancyNpcs.getInstance().reloadConfig();
         FileConfiguration config = FancyNpcs.getInstance().getConfig();
 
-        language = (String) ConfigHelper.getOrDefault(config, "language", "default");
-        config.setInlineComments("language", List.of("Language to use for translatable messages."));
+        language = (String) ConfigHelper.getOrDefault(config, "language", FancyNpcs.DEFAULT_LANGUAGE);
+        config.setInlineComments("language", List.of("Language name from languages/*.yml. Legacy 'default' uses zh_CN."));
 
         skipInvisibleNpcs = (boolean) ConfigHelper.getOrDefault(config, "skip_invisible_npcs", true);
         config.setInlineComments("skip_invisible_npcs", List.of("Whether invisible NPCs should not be sent to the player."));

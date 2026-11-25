@@ -14,14 +14,12 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 // TO-DO: Console support with --position and --world parameter flags.
 public enum CopyCMD {
     INSTANCE; // SINGLETON
 
-    private static final Pattern NPC_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9/_-]*$");
     private final Translator translator = FancyNpcs.getInstance().getTranslator();
 
     @Command(value = "npc copy <npc> <name>", requiredSender = Player.class)
@@ -32,16 +30,23 @@ public enum CopyCMD {
             final @NotNull String name
     ) {
         // Sending error message if name does not match configured pattern.
-        if (!NPC_NAME_PATTERN.matcher(name).find()) {
+        if (!CreateCMD.isValidName(name)) {
             translator.translate("npc_create_failure_invalid_name").withPrefix().replaceStripped("name", name).send(sender);
             return;
         }
-        // Creating a copy of an NPC and all it's data. The only different thing is it's UUID.
-        final Npc copied = FancyNpcs.getInstance().getNpcAdapter().apply(
+        var plugin = FancyNpcs.getInstance();
+        var manager = plugin.getNpcManagerImpl();
+        var creator = sender.getUniqueId();
+        if (manager.findReservedCreationName(name, creator) != null) {
+            sendRegistrationFailure(sender, name, true);
+            return;
+        }
+
+        final Npc copied = plugin.getNpcAdapter().apply(
                 new NpcData(
                         UUID.randomUUID().toString(),
                         name,
-                        sender.getUniqueId(),
+                        creator,
                         npc.getData().getDisplayName(),
                         npc.getData().getSkinData(),
                         sender.getLocation().clone(),
@@ -71,11 +76,19 @@ public enum CopyCMD {
         // Calling the event and creating + registering copied NPC if not cancelled.
         if (new NpcCreateEvent(copied, sender).callEvent()) {
             copied.create();
-            FancyNpcs.getInstance().getNpcManagerImpl().registerNpc(copied);
+            if (!manager.registerCreatedNpc(copied)) {
+                sendRegistrationFailure(sender, name, manager.findReservedCreationName(name, creator) != null);
+                return;
+            }
             copied.spawnForAll();
             translator.translate("npc_copy_success").withPrefix().replace("npc", npc.getData().getName()).replace("new_npc", copied.getData().getName()).send(sender);
         } else {
             translator.translate("command_npc_modification_cancelled").withPrefix().send(sender);
         }
+    }
+
+    private void sendRegistrationFailure(Player sender, String name, boolean duplicate) {
+        translator.translate(duplicate ? "npc_create_failure_already_exists" : "npc_create_incomplete")
+                .withPrefix().replaceStripped("npc", name).send(sender);
     }
 }

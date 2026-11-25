@@ -7,6 +7,8 @@ import de.oliver.fancylib.translations.Translator;
 import de.oliver.fancynpcs.api.actions.ActionManager;
 import de.oliver.fancynpcs.api.skins.SkinManager;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.ApiStatus;
@@ -49,6 +51,15 @@ public interface FancyNpcsPlugin {
 
     NpcManager getNpcManager();
 
+    @ApiStatus.Internal
+    default void requestVisibilityCheck(Npc npc, Player player) {
+        Npc.runOnViewerOwner(this, player, () -> {
+            var location = player.getLocation();
+            boolean visible = npc.shouldBeVisible(player, location);
+            npc.submitNpcWork(() -> npc.applyVisibility(player, location.getWorld(), visible));
+        }, () -> {});
+    }
+
     AttributeManager getAttributeManager();
 
     ActionManager getActionManager();
@@ -63,4 +74,13 @@ public interface FancyNpcsPlugin {
      */
     @ApiStatus.Internal
     void registerCommand(Object command);
+
+    /**
+     * Attaches commands, attributes and actions until the handle is closed or either plugin is disabled.
+     * Register against the current host from the addon's lifecycle; don't retain old host API objects.
+     * Set NPC attributes or actions using the handles returned by the respective FancyNpcs managers.
+     */
+    default NpcExtension.Registration registerExtension(Plugin owner, NpcExtension extension) {
+        throw new UnsupportedOperationException("This FancyNpcs build does not support scoped extensions");
+    }
 }

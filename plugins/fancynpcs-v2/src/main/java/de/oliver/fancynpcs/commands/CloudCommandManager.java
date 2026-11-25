@@ -27,12 +27,19 @@ import org.incendo.cloud.exception.parsing.NumberParseException;
 import org.incendo.cloud.exception.parsing.ParserException;
 import org.incendo.cloud.execution.ExecutionCoordinator;
 import org.incendo.cloud.paper.LegacyPaperCommandManager;
+import org.incendo.cloud.parser.flag.CommandFlagParser.FlagParseException;
 import org.incendo.cloud.parser.standard.BooleanParser;
 import org.incendo.cloud.parser.standard.EnumParser;
+import org.incendo.cloud.parser.standard.StringParser;
+import org.incendo.cloud.permission.PredicatePermission;
+import org.incendo.cloud.suggestion.SuggestionProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.incendo.cloud.exception.handling.ExceptionHandler.unwrappingHandler;
 
@@ -74,12 +81,29 @@ public final class CloudCommandManager {
      */
     public @NotNull CloudCommandManager registerExceptionHandlers() {
         final Translator translator = plugin.getTranslator();
+        // Later registrations take priority over the generic Cloud fallbacks.
+        commandManager.exceptionController().registerHandler(ArgumentParseException.class, context ->
+                translator.translate("command_invalid_argument").withPrefix().send(context.context().sender()));
+        commandManager.exceptionController().registerHandler(NoSuchCommandException.class, context ->
+                translator.translate("command_unknown").withPrefix().send(context.context().sender()));
         // Unwrapping some causes of ArgumentParseException to be handled in standalone exception handlers.
         commandManager.exceptionController().registerHandler(ArgumentParseException.class, unwrappingHandler(NumberParseException.class));
         commandManager.exceptionController().registerHandler(ArgumentParseException.class, unwrappingHandler(BooleanParser.BooleanParseException.class));
         commandManager.exceptionController().registerHandler(ArgumentParseException.class, unwrappingHandler(EnumParser.EnumParseException.class));
         commandManager.exceptionController().registerHandler(ArgumentParseException.class, unwrappingHandler(WorldParser.WorldParseException.class));
         commandManager.exceptionController().registerHandler(ArgumentParseException.class, unwrappingHandler(ReplyingParseException.class));
+        commandManager.exceptionController().registerHandler(ArgumentParseException.class, unwrappingHandler(FlagParseException.class));
+        commandManager.exceptionController().registerHandler(FlagParseException.class, context -> {
+            var error = context.exception();
+            String key = switch (error.failureReason()) {
+                case UNKNOWN_FLAG -> "command_flag_unknown";
+                case DUPLICATE_FLAG -> "command_flag_duplicate";
+                case NO_FLAG_STARTED -> "command_flag_expected";
+                case MISSING_ARGUMENT -> "command_flag_missing_argument";
+                case NO_PERMISSION -> "command_missing_permissions";
+            };
+            translator.translate(key).withPrefix().replaceStripped("input", error.input()).send(context.context().sender());
+        });
         // Overriding some default handlers to send specialized messages.
         commandManager.exceptionController().registerHandler(NoPermissionException.class, (exceptionContext) -> {
             translator.translate("command_missing_permissions")
@@ -225,9 +249,33 @@ public final class CloudCommandManager {
         if (FancyNpcs.ENABLE_DEBUG_MODE_FEATURE_FLAG.isEnabled()) {
             annotationParser.parse(FancyNpcsDebugCMD.INSTANCE);
         }
-
+        var extensions = plugin.getExtensions();
+        commandManager.command(commandManager.commandBuilder("npc")
+                .required("extension", StringParser.stringParser(), SuggestionProvider.blockingStrings(
+                        (context, input) -> extensions.suggestNames(context.sender())))
+                .optional("extension_arguments", StringParser.greedyStringParser(), SuggestionProvider.blockingStrings((context, input) -> {
+                    var command = extensions.command(context.sender(), context.get("extension"));
+                    return command == null ? java.util.List.of() : command.suggestions().apply(context.sender(), input.remainingInput());
+                }))
+                .permission(PredicatePermission.of(extensions::mayUse))
+                .handler(context -> {
+                    var command = extensions.command(context.sender(), context.get("extension"));
+                    if (command == null) {
+                        plugin.getTranslator().translate("npc_unknown_subcommand").withPrefix().send(context.sender());
+                    } else {
+                        command.execute().accept(context.sender(), context.optional("extension_arguments").orElse("").toString());
+                    }
+                }));
 
         return this;
+    }
+
+    public Set<String> npcSubcommandNames() {
+        return commandManager.commands().stream().map(org.incendo.cloud.Command::nonFlagArguments)
+                .filter(parts -> parts.size() >= 2 && parts.getFirst().name().equals("npc"))
+                .map(parts -> parts.get(1)).filter(component -> component.type() == CommandComponent.ComponentType.LITERAL)
+                .flatMap(component -> Stream.concat(Stream.of(component.name()), component.aliases().stream()))
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     /**

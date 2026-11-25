@@ -2,6 +2,7 @@ package de.oliver.fancynpcs.v26_2;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
@@ -16,6 +17,7 @@ import de.oliver.fancynpcs.api.events.NpcSpawnEvent;
 import de.oliver.fancynpcs.api.utils.NpcEquipmentSlot;
 import io.papermc.paper.adventure.PaperAdventure;
 import net.minecraft.Optionull;
+import net.minecraft.commands.Commands;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -26,10 +28,12 @@ import net.minecraft.network.protocol.game.*;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.commands.SayCommand;
 import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.FutureChain;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -38,23 +42,31 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.Team;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.craftbukkit.CraftServer;
 import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.command.VanillaCommandWrapper;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.util.CraftNamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.IllegalPluginAccessException;
 import org.lushplugins.chatcolorhandler.paper.PaperColor;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public class Npc_26_2 extends Npc {
 
     private final String localName;
     private final UUID uuid;
+    private final Map<UUID, Long> lookDirections = new ConcurrentHashMap<>();
     private Entity npc;
     private Display.TextDisplay sittingVehicle;
 
@@ -66,7 +78,45 @@ public class Npc_26_2 extends Npc {
     }
 
     @Override
+    public Consumer<String> createConsoleCommandDispatcher() {
+        var plugin = FancyNpcsPlugin.get().getPlugin();
+        var fallback = super.createConsoleCommandDispatcher();
+        // Dispatch is already ordered; vanilla say needs a shared chain for its async chat callbacks.
+        var chain = new FutureChain(task -> {
+            if (!plugin.isEnabled()) return;
+            try {
+                Bukkit.getGlobalRegionScheduler().execute(plugin, () -> {
+                    if (plugin.isEnabled()) task.run();
+                });
+            } catch (IllegalPluginAccessException e) {
+                if (plugin.isEnabled()) throw e;
+            }
+        });
+        return command -> {
+            String line = StringUtils.normalizeSpace(command.trim());
+            if (line.startsWith("say ") || line.startsWith("minecraft:say ")) {
+                var source = VanillaCommandWrapper.getListener(Bukkit.getConsoleSender());
+                var commands = source.getServer().getCommands();
+                var parsed = commands.getDispatcher().parse(line, source.withSigningContext(source.getSigningContext(), chain));
+                var executor = parsed.getContext().getLastChild().getCommand();
+                if (executor != null && executor.getClass().getNestHost() == SayCommand.class) {
+                    try {
+                        Commands.validateParseResults(parsed);
+                    } catch (CommandSyntaxException ignored) {
+                        fallback.accept(command);
+                        return;
+                    }
+                    commands.performCommand(parsed, line, true);
+                    return;
+                }
+            }
+            fallback.accept(command);
+        };
+    }
+
+    @Override
     public void create() {
+        lookDirections.clear();
         MinecraftServer minecraftServer = ((CraftServer) Bukkit.getServer()).getServer();
         ServerLevel serverLevel = ((CraftWorld) data.getLocation().getWorld()).getHandle();
         GameProfile gameProfile = new GameProfile(uuid, localName);
@@ -85,13 +135,26 @@ public class Npc_26_2 extends Npc {
 
     @Override
     public void spawn(Player player) {
+        var owner = FancyNpcsPlugin.get();
+        runOnViewerOwner(owner, player, () -> {
+            World viewerWorld = player.getWorld();
+            submitNpcWork(() -> spawn(player, viewerWorld));
+        }, () -> {});
+    }
+
+    @Override
+    public void spawn(Player player, World viewerWorld) {
+        var worker = FancyNpcsPlugin.get().getNpcThread();
+        if (worker.isShutdown()) {
+            return;
+        }
         ServerPlayer serverPlayer = ((CraftPlayer) player).getHandle();
 
         if (npc == null) {
             return;
         }
 
-        if (!data.getLocation().getWorld().getName().equalsIgnoreCase(serverPlayer.level().getWorld().getName())) {
+        if (data.getLocation().getWorld() != viewerWorld) {
             return;
         }
 
@@ -155,25 +218,33 @@ public class Npc_26_2 extends Npc {
         );
         packets.add(addEntityPacket);
 
+        resetLookDirection(player.getUniqueId());
         isVisibleForPlayer.put(player.getUniqueId(), true);
 
 
         int removeNpcsFromPlayerlistDelay = FancyNpcsPlugin.get().getFancyNpcConfig().getRemoveNpcsFromPlayerlistDelay();
         if (!data.isShowInTab() && removeNpcsFromPlayerlistDelay > 0) {
-            FancyNpcsPlugin.get().getNpcThread().schedule(() -> {
-                ClientboundPlayerInfoRemovePacket playerInfoRemovePacket = new ClientboundPlayerInfoRemovePacket(List.of(npc.getUUID()));
-                runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> serverPlayer.connection.send(playerInfoRemovePacket));
-            }, removeNpcsFromPlayerlistDelay, TimeUnit.MILLISECONDS);
+            try {
+                worker.schedule(() -> {
+                    ClientboundPlayerInfoRemovePacket playerInfoRemovePacket = new ClientboundPlayerInfoRemovePacket(List.of(addEntityPacket.getUUID()));
+                    runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> NpcClientState.send(serverPlayer, playerInfoRemovePacket));
+                }, removeNpcsFromPlayerlistDelay, TimeUnit.MILLISECONDS);
+            } catch (RejectedExecutionException rejected) {
+                if (!worker.isShutdown()) {
+                    throw rejected;
+                }
+            }
         }
 
         ClientboundBundlePacket bundlePacket = new ClientboundBundlePacket(packets);
-        runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> serverPlayer.connection.send(bundlePacket));
+        runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> NpcClientState.send(serverPlayer, bundlePacket));
 
         update(player);
     }
 
     @Override
     public void remove(Player player) {
+        resetLookDirection(player.getUniqueId());
         if (npc == null) {
             return;
         }
@@ -182,17 +253,17 @@ public class Npc_26_2 extends Npc {
 
         if (npc instanceof ServerPlayer npcPlayer) {
             ClientboundPlayerInfoRemovePacket playerInfoRemovePacket = new ClientboundPlayerInfoRemovePacket(List.of((npcPlayer.getUUID())));
-            runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> serverPlayer.connection.send(playerInfoRemovePacket));
+            runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> NpcClientState.send(serverPlayer, playerInfoRemovePacket));
         }
 
         // remove entity
         ClientboundRemoveEntitiesPacket removeEntitiesPacket = new ClientboundRemoveEntitiesPacket(npc.getId());
-        runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> serverPlayer.connection.send(removeEntitiesPacket));
+        runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> NpcClientState.send(serverPlayer, removeEntitiesPacket));
 
         // remove sitting vehicle
         if (sittingVehicle != null) {
             ClientboundRemoveEntitiesPacket removeSittingVehiclePacket = new ClientboundRemoveEntitiesPacket(sittingVehicle.getId());
-            runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> serverPlayer.connection.send(removeSittingVehiclePacket));
+            runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> NpcClientState.send(serverPlayer, removeSittingVehiclePacket));
         }
 
         isVisibleForPlayer.put(serverPlayer.getUUID(), false);
@@ -200,33 +271,43 @@ public class Npc_26_2 extends Npc {
 
     @Override
     public void lookAt(Player player, Location location) {
-        if (npc == null) {
-            return;
-        }
+        var target = npc;
+        Location npcLocation = data.getLocation();
+        if (target == null || npcLocation == null || !isShownFor(player)) return;
 
-        ServerPlayer serverPlayer = ((CraftPlayer) player).getHandle();
-
-        npc.setRot(location.getYaw(), location.getPitch());
-        npc.setYHeadRot(location.getYaw());
-        npc.setXRot(location.getPitch());
-        npc.setYRot(location.getYaw());
+        UUID viewer = player.getUniqueId();
+        float yaw = location.getYaw(), pitch = location.getPitch();
+        Long direction = (long) Float.floatToIntBits(yaw) << 32 | Integer.toUnsignedLong(Float.floatToIntBits(pitch));
+        if (direction.equals(lookDirections.get(viewer))) return;
+        lookDirections.put(viewer, direction);
 
         ClientboundTeleportEntityPacket teleportEntityPacket = new ClientboundTeleportEntityPacket(
-                npc.getId(),
+                target.getId(),
                 new PositionMoveRotation(
-                        new Vec3(data.getLocation().getX(), data.getLocation().getY(), data.getLocation().getZ()),
+                        new Vec3(npcLocation.getX(), npcLocation.getY(), npcLocation.getZ()),
                         Vec3.ZERO,
-                        location.getYaw(),
-                        location.getPitch()
+                        yaw,
+                        pitch
                 ),
                 Set.of(),
                 false
         );
-        runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> serverPlayer.connection.send(teleportEntityPacket));
+        ClientboundRotateHeadPacket rotateHeadPacket = new ClientboundRotateHeadPacket(target, (byte) (yaw * (256f / 360f)));
+        runOnViewerOwner(FancyNpcsPlugin.get(), player, () -> {
+            if (npc == target && isShownFor(player) && player.getWorld() == npcLocation.getWorld()
+                    && Objects.equals(lookDirections.get(viewer), direction)) {
+                var connection = ((CraftPlayer) player).getHandle().connection;
+                connection.send(teleportEntityPacket);
+                connection.send(rotateHeadPacket);
+            } else {
+                lookDirections.remove(viewer, direction);
+            }
+        }, () -> lookDirections.remove(viewer, direction));
+    }
 
-        float angelMultiplier = 256f / 360f;
-        ClientboundRotateHeadPacket rotateHeadPacket = new ClientboundRotateHeadPacket(npc, (byte) (location.getYaw() * angelMultiplier));
-        runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> serverPlayer.connection.send(rotateHeadPacket));
+    @Override
+    protected void resetLookDirection(UUID viewer) {
+        lookDirections.remove(viewer);
     }
 
     @Override
@@ -368,7 +449,7 @@ public class Npc_26_2 extends Npc {
         }
 
         ClientboundBundlePacket bundlePacket = new ClientboundBundlePacket(packets);
-        runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> serverPlayer.connection.send(bundlePacket));
+        runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> NpcClientState.send(serverPlayer, bundlePacket));
     }
 
     @Override
@@ -390,6 +471,7 @@ public class Npc_26_2 extends Npc {
 
     @Override
     public void move(Player player, boolean swingArm) {
+        resetLookDirection(player.getUniqueId());
         if (npc == null) {
             return;
         }
@@ -466,7 +548,7 @@ public class Npc_26_2 extends Npc {
         sittingVehicle.setPos(data.getLocation().x(), data.getLocation().y(), data.getLocation().z());
 
         ServerEntity serverEntity = new ServerEntity(
-                serverPlayer.level(),
+                (ServerLevel) npc.level(),
                 sittingVehicle,
                 0,
                 false,
@@ -474,7 +556,7 @@ public class Npc_26_2 extends Npc {
                 Set.of()
         );
         ClientboundAddEntityPacket addEntityPacket = new ClientboundAddEntityPacket(sittingVehicle, serverEntity);
-        runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> serverPlayer.connection.send(addEntityPacket));
+        runOnPlayerScheduler(serverPlayer.getBukkitEntity(), () -> NpcClientState.send(serverPlayer, addEntityPacket));
 
         sittingVehicle.passengers = ImmutableList.of(npc);
 

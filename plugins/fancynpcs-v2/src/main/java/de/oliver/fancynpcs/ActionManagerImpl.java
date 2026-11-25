@@ -23,7 +23,7 @@ public class ActionManagerImpl implements ActionManager {
 
     @Override
     public void unregisterAction(NpcAction action) {
-        actions.remove(action.getName());
+        actions.computeIfPresent(action.getName(), (name, current) -> current == action ? null : current);
     }
 
     @Override

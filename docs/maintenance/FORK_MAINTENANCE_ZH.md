@@ -16,6 +16,10 @@
 
 ### FancyNpcs
 
+- 动态世界确认卸载后，只清理属于旧世界实例的运行时 NPC，保留存档；同一张图重开时按图恢复，无需手动重载插件。确认过程兼容 Worlds 的异步存图，不把可取消的卸图事件当成已经卸载。
+- 创建和复制也检查未加载世界的已存档 NPC 名，沿用大小写和所有者规则；旧存档有同范围重名时按文件顺序加载第一条，提示并保留其余记录。
+- NPC 名称可使用汉字，例如 `/npc create 大厅商人`；子命令仍为英文。`/npc create` 和 `/npc copy` 都会异步保存新记录，紧接着执行 `/fancynpcs reload` 无须手动保存。
+- 内置简体中文。新配置默认使用 `zh_CN`；旧服的 `language: default` 在运行时也使用简体中文，无须改配置。已经指定的自定义语言继续按原值加载。保留英文模板作为缺失文本的回退；需要显式使用英文时，可以复制 `languages/default.yml` 为 `languages/en.yml`，把 `language_name` 和配置里的 `language` 同时设为 `en`。
 - `/npc skin <NPC> <正版用户名>` 不再在玩家所在的区域线程等待网络请求。
 - SkinsRestorer、Eclipse、服务端 Profile 和 Mojang 查询在有界执行器中完成。
 - 相同用户名与皮肤类型的并发查询共享结果，避免重复请求外部接口。
@@ -70,8 +74,21 @@ Foojay toolchain resolver 使用 `1.0.0`，因为旧 `0.8.0` 引用了已被 Gra
 
 - 更换 JAR 前完整停止子服，并备份当前 FancyNpcs 与 FancyNpcsModel。
 - `plugins` 中每种插件只保留一个 JAR。
-- 不使用 PlugManX 热替换这一组插件；正常启动后再验证 NPC。
+- FancyNpcs 与 FancyNpcsModel 同服时，不使用 PlugManX 热替换主插件。模型附属当前不能自动接入新一代 FancyNpcs。
+- 仅 FancyNpcs 主插件的在线卸载针对 Folia 26.2 实现。以 Shiroha `59603df` 和 PlugManX `3.2.1` 的测试结果为准：OP 使用 `/plugman unload FancyNpcs`、`/plugman load FancyNpcs`，无需运行旧版的 `prepare_unload`。权限和结果由 PlugManX 处理；不保证操作无卡顿，也不视为核心命令树竞态已通用修复。
 - 回滚时停止服务器，恢复两份旧 JAR 并重新启动。配置和 NPC 数据不要删除。
+
+## FancyNpcs 附属注册接口
+
+- 从 `2.11.0+370-6` 起，新附属可在当前 FancyNpcs 实例上调用 `registerExtension(this, new NpcExtension(commands, attributes, actions))`。返回的 `Registration` 可显式、重复关闭；附属停用或 FancyNpcs 停用也会撤销注册。不要跨代缓存主插件或注册句柄。
+- `commands` 的键是 `/npc` 之后的单个字面子命令。每个 `NpcExtension.Command` 显式声明 Bukkit 权限，提供执行和补全回调；参数是子命令后未经业务解释的字符串。顶层命令（如 `/fancynpcsmodel`）由所属附属自己注册。不可覆盖现有内置子命令，也不要同时用旧的 `registerCommand(Object)` 注册同一组命令。
+- 在 NPC 数据中使用 FancyNpcs 属性/动作管理器查询得到的对象，不直接塞入附属自身回调。持久化以名称和参数为准。注册撤下后新请求不再路由给它；已经运行的回调、任务、渲染资源和监听器仍由附属停止和清理。补全回调可能来自异步读取，不访问世界或实体状态。
+- 本接口不让旧版 FancyNpcsModel 自动获得热卸载能力。要跨主插件换代，附属还须单独解除旧宿主并接入新一代；联合验收通过前，双插件部署使用完整停服重启。
+- 从 `2.11.0+370-7` 起，`/npc action <npc> <trigger> list` 会按当前动作注册状态显示存档占位动作。附属注册后显示正式名称，撤销后仍标注 `(unknown)`；不修改存档或点击执行逻辑。
+
+## FancyNpcs 双描述打包
+
+从 `2.11.0+370-12` 起，FancyNpcs 主 JAR 同时生成 `plugin.yml` 和 `paper-plugin.yml`。前者供 PlugManX 3.2.1 的 `/plugman load` 文件名补全使用；Shiroha 26.2 仍使用后者的 Paper 加载器。两个描述共用构建版本及可选依赖，不要手动给成品另追加描述。
 
 ## 同步上游
 

@@ -1,0 +1,404 @@
+# 简体中文语言资源，基于 default.yml。
+# 消息支持 MiniMessage 格式：https://docs.advntr.dev/minimessage/format.html
+language_name: zh_CN
+
+messages:
+  # Folia 维护版命令提示
+  command_invalid_argument: "命令参数无效，请检查用法。"
+  command_unknown: "未知命令。输入 /npc help 查看可用的 NPC 命令。"
+  command_flag_unknown: "未知选项：{input}。"
+  command_flag_duplicate: "选项 {input} 重复填写。"
+  command_flag_expected: "应填写以 -- 开头的选项，但收到的是 {input}。"
+  command_flag_missing_argument: "选项 {input} 缺少参数值。"
+  command_unloading: "FancyNpcs 正在卸载，命令未执行。"
+  npc_unknown_subcommand: "未知或不可用的 NPC 子命令。输入 /npc help 查看可用命令。"
+  npc_create_waiting_for_data: "正在等待 NPC 数据加载，加载完成后会执行命令。"
+  npc_create_data_unavailable: "无法加载 NPC 数据。请修复存储错误后执行 /fancynpcs reload。"
+  npc_create_data_load_failed: "无法加载 NPC 数据，命令未执行。请查看服务端日志。"
+  npc_create_queued_failure: "未能创建 NPC，请查看服务端日志。"
+  npc_create_cancelled_unload: "FancyNpcs 已卸载，已取消创建 NPC {npc}。"
+  npc_create_incomplete: "NPC 未能创建。"
+  npc_remove_unavailable: "该 NPC 已不在注册列表中，或 FancyNpcs 正在卸载。"
+  npc_remove_storage_failure: "NPC {npc} 已从内存移除，但未能保存。请查看服务端日志，再执行 /fancynpcs save。"
+  fancynpcs_reload_failure: "无法重新加载 NPC，当前 NPC 已保留。请查看服务端日志。"
+  fancynpcs_unload_preparation_unsupported: "FancyNpcs 的卸载准备命令适用于 Folia 26.2。"
+  fancynpcs_unload_preparation_not_required: "不再需要执行卸载准备。如果装有附属插件，请先查看维护说明再卸载。"
+  fancynpcs_save_unavailable: "FancyNpcs 正在加载或卸载，暂时无法保存 NPC。"
+  fancynpcs_save_failure: "无法保存 NPC。请查看服务端日志，再执行 /fancynpcs save。"
+  fancynpcs_feature_player_npcs: "玩家自建 NPC"
+  fancynpcs_feature_native_threads: "原生线程"
+  fancynpcs_feature_debug_mode: "调试模式"
+  fancynpcs_version_unavailable: "{errorColor}无法查询最新版本。"
+  fancynpcs_version_outdated: "{warningColor}FancyNpcs 有新版本可用。<newline>当前版本：{current_ver}<newline>最新版本：{latest_ver}<newline><click:open_url:'{download_url}'><u>下载最新版本</u></click>"
+  fancynpcs_version_latest: "{successColor}FancyNpcs 已是最新版本。<newline>版本：{version}（Git：{hash}）"
+  fancynpcs_command_index: "FancyNpcs 命令"
+
+  # 通用（状态）
+  true: "{successColor}是"
+  enabled: "{successColor}已启用"
+  false: "{errorColor}否"
+  disabled: "{errorColor}已禁用"
+
+  # 通用（装备槽位）
+  main_hand: "主手"
+  off_hand: "副手"
+  head: "头部"
+  chest: "胸部"
+  legs: "腿部"
+  feet: "脚部"
+
+  # 通用（可用性）
+  unknown: "未知"
+  not_available: "不可用"
+
+  # 通用（可见性）
+  always_visible: "始终可见"
+  not_visible: "不可见"
+
+  # 通用（默认值）
+  default: "默认（{value}）"
+
+  # 通用（颜色）
+  color_black: "<dark_gray>黑色"
+  color_dark_blue: "<dark_blue>深蓝色"
+  color_dark_green: "<dark_green>深绿色"
+  color_dark_aqua: "<dark_aqua>深青色"
+  color_dark_red: "<dark_red>深红色"
+  color_dark_purple: "<dark_purple>深紫色"
+  color_gold: "<gold>金色"
+  color_gray: "灰色"
+  color_dark_gray: "<dark_gray>深灰色"
+  color_blue: "<blue>蓝色"
+  color_green: "<green>绿色"
+  color_aqua: "<aqua>青色"
+  color_red: "<red>红色"
+  color_light_purple: "<light_purple>浅紫色"
+  color_yellow: "<yellow>黄色"
+  color_white: "<white>白色"
+
+  # 通用（其他）
+  interaction_on_cooldown: "{errorColor}交互仍在冷却中，请等待 {primaryColor}{time}{errorColor}。"
+  action_missing_permissions: "{errorColor}你没有权限执行此操作。"
+  action_missing_item: "{errorColor}执行此操作至少需要 {amount} 个 {item}。"
+  player_npcs_cannot_modify_npc: "{errorColor}你只能修改自己拥有的 NPC。"
+  player_npcs_cannot_move_npc: "{errorColor}你只能将 NPC 传送到自己的地块。"
+  player_npcs_create_failure_limit_reached: "{errorColor}你创建的 NPC 数量已达上限。"
+  player_npcs_create_failure_not_owned_plot: "{errorColor}你只能在自己的地块创建 NPC。"
+
+  # 通用（以 OP 身份执行玩家命令的警告）
+  player_command_as_op_warning: "{warningColor}<b>注意：</b>{secondaryColor}本服有 NPC 正在使用“player_command_as_op”动作。它会在执行命令时临时授予玩家 OP 权限，存在安全风险，不应继续使用。请尽快改用“player_command”，并确认玩家无需 OP 权限也能执行相应命令。“player_command_as_op”将在未来的更新中移除。"
+  player_command_as_op_warning_affected: "{secondaryColor}受影响的 NPC：{warningColor}{affected_npcs}"
+
+  # 命令（通用反馈）
+  command_missing_permissions: "{errorColor}你没有权限使用此命令。"
+  command_wrong_usage: "{errorColor}此子命令不存在。请使用 {primaryColor}/npc help{errorColor} 查看可用命令。"
+  command_incomplete_usage: "{errorColor}命令不完整。请使用 {primaryColor}/npc help{errorColor} 查看正确用法。"
+  command_player_only: "{errorColor}此命令只能由游戏内的玩家执行。"
+  command_invalid_boolean: "{errorColor}参数 {primaryColor}{input}{errorColor} 必须是 {primaryColor}true{errorColor} 或 {primaryColor}false{errorColor}。"
+  command_invalid_number: "{errorColor}参数 {primaryColor}{input}{errorColor} 不是有效的数字。"
+  command_invalid_location: "{errorColor}参数 {primaryColor}{input}{errorColor} 不是有效的位置。"
+  command_invalid_world: "{errorColor}世界 {primaryColor}{input}{errorColor} 不存在或尚未加载。"
+  command_invalid_glowing_color: "{errorColor}参数 {primaryColor}{input}{errorColor} 不是有效的发光颜色。"
+  command_invalid_npc_visibility: "{errorColor}参数 {primaryColor}{input}{errorColor} 不是有效的可见模式。"
+  command_invalid_list_sort_type: "{errorColor}参数 {primaryColor}{input}{errorColor} 不是有效的排序方式。"
+  command_invalid_nearby_sort_type: "{errorColor}参数 {primaryColor}{input}{errorColor} 不是有效的排序方式。"
+  command_invalid_entity_type: "{errorColor}参数 {primaryColor}{input}{errorColor} 不是有效的实体类型。"
+  command_invalid_action_trigger: "{errorColor}参数 {primaryColor}{input}{errorColor} 不是有效的动作触发条件。"
+  command_invalid_action_type: "{errorColor}参数 {primaryColor}{input}{errorColor} 不是有效的动作类型。"
+  command_invalid_npc: "{errorColor}NPC {primaryColor}{input}{errorColor} 不存在。"
+  command_invalid_material: "{errorColor}参数 {primaryColor}{input}{errorColor} 不是有效的材质。"
+  command_invalid_attribute: "{errorColor}指定的值 {primaryColor}{input}{errorColor} 不是有效的属性。"
+  command_invalid_attribute_value: "{errorColor}指定的值 {primaryColor}{input}{errorColor} 不适用于此属性。"
+  command_invalid_equipment_slot: "{errorColor}参数 {primaryColor}{input}{errorColor} 不是有效的槽位。"
+  command_invalid_interval: "{errorColor}参数 {primaryColor}{input}{errorColor} 不是有效的时长。"
+  command_invalid_enum_generic: "{errorColor}参数 {primaryColor}{input}{errorColor} 不是 {enum} 的有效取值。"
+  command_unsupported_npc_type: "{errorColor}此 NPC 类型不支持该功能。"
+  command_input_contains_blocked_command: "{errorColor}此命令不允许在交互中执行。"
+  command_npc_modification_cancelled: "{errorColor}对 NPC 的修改已被 API 取消。"
+  command_unexpected_exception: "{errorColor}发生了意外错误！请查看控制台了解详情。"
+
+  # 通用命令用法（由 Cloud 提供）
+  command_invalid_syntax_generic: "{errorColor}用法：{primaryColor}/{syntax}"
+
+  # 命令用法
+  command_syntax:
+    fancynpcs: "用法：{primaryColor}/fancynpcs {secondaryColor}(version | reload | save | feature_flags)"
+    npc: "{errorColor}未知命令。请使用 {primaryColor}/npc help{errorColor} 查看可用命令。"
+    npc_action: "用法：{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}(add | add_after | add_before | clear | list | move_down | move_up | remove | set)"
+    npc_action_add: "用法：{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}add {secondaryColor}(动作类型) [值]"
+    npc_action_add_after: "用法：{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}add_after {secondaryColor}(序号) (类型) [值]"
+    npc_action_add_before: "用法：{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}add_before {secondaryColor}(序号) (类型) [值]"
+    npc_action_remove: "用法：{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}remove {secondaryColor}(序号)"
+    npc_action_move_down: "用法：{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}move_down {secondaryColor}(序号)"
+    npc_action_move_up: "用法：{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}move_up {secondaryColor}(序号)"
+    npc_action_set: "用法：{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}set {secondaryColor}(序号) (类型) [值]"
+    npc_attribute: "用法：{primaryColor}/npc attribute {secondaryColor}(NPC名称) {primaryColor}(set | list)"
+    npc_attribute_set: "用法：{primaryColor}/npc attribute {secondaryColor}(NPC名称) {primaryColor}set {secondaryColor}(属性) (值)"
+    npc_center: "用法：{primaryColor}/npc center {secondaryColor}(NPC名称)"
+    npc_collidable: "用法：{primaryColor}/npc collidable {secondaryColor}(NPC名称) (开关状态)"
+    npc_copy: "用法：{primaryColor}/npc copy {secondaryColor}(NPC名称) (新名称)"
+    npc_create: "用法：{primaryColor}/npc create {secondaryColor}(NPC名称) [--type] [--location] [--world]"
+    npc_displayname: "用法：{primaryColor}/npc displayname {secondaryColor}(NPC名称) (显示名称)"
+    npc_equipment: "用法：{primaryColor}/npc equipment {secondaryColor}(NPC名称) {primaryColor}(set | clear | list)"
+    npc_equipment_set: "用法：{primaryColor}/npc equipment {secondaryColor}(NPC名称) {primaryColor}set {secondaryColor}(装备槽) (@hand | @none | 物品)"
+    npc_fix: "用法：{primaryColor}/npc fix {secondaryColor}(NPC名称)"
+    npc_help: "用法：{primaryColor}/npc help {secondaryColor}[页码]"
+    npc_glowing: "用法：{primaryColor}/npc glowing {secondaryColor}(NPC名称) (disabled | 颜色)"
+    npc_info: "用法：{primaryColor}/npc info {secondaryColor}(NPC名称)"
+    npc_interaction_cooldown: "用法：{primaryColor}/npc interaction_cooldown {secondaryColor}(NPC名称) (disabled | 时长)"
+    npc_scale: "用法：{primaryColor}/npc scale {secondaryColor}(NPC名称) (缩放倍率)"
+    npc_list: "用法：{primaryColor}/npc list {secondaryColor}[筛选条件…]"
+    npc_move_here: "用法：{primaryColor}/npc move_here {secondaryColor}(NPC名称)"
+    npc_move_to: "用法：{primaryColor}/npc move_to {secondaryColor}(NPC名称) (x) (y) (z) [世界]"
+    npc_nearby: "用法：{primaryColor}/npc nearby {secondaryColor}[筛选条件…]"
+    npc_remove: "用法：{primaryColor}/npc remove {secondaryColor}(NPC名称)"
+    npc_rotate: "用法：{primaryColor}/npc rotate {secondaryColor}(NPC名称) (水平角度) (俯仰角度)"
+    npc_show_in_tab: "用法：{primaryColor}/npc show_in_tab {secondaryColor}(NPC名称) (开关状态)"
+    npc_skin: "用法：{primaryColor}/npc skin {secondaryColor}(NPC名称) (@none | @mirror | 正版用户名 | UUID | 占位符 | 链接 | 文件名) [--slim]"
+    npc_teleport: "用法：{primaryColor}/npc teleport {secondaryColor}(NPC名称)"
+    npc_turn_to_player: "用法：{primaryColor}/npc turn_to_player {secondaryColor}(NPC名称) (开关状态)"
+    npc_turn_to_player_distance: "用法：{primaryColor}/npc turn_to_player_distance {secondaryColor}(NPC名称) (default | 距离)"
+    npc_type: "用法：{primaryColor}/npc type {secondaryColor}(NPC名称) (类型)"
+    npc_visibility: "用法：{primaryColor}/npc visibility {secondaryColor}(NPC名称) (all | permission_required | manual)"
+    npc_visibility_distance: "用法：{primaryColor}/npc visibility_distance {secondaryColor}(NPC名称) (always_visible | default | not_visible | 距离)"
+
+  # 命令（fancynpcs）
+  fancynpcs_reload_success: "{successColor}插件已重新加载。"
+  fancynpcs_save_success: "{successColor}NPC 已保存。"
+  fancynpcs_feature_flags_header: "<dark_gray><st>-------------------</st>   {secondaryColor}功能开关  <dark_gray><st>------------------</st><newline>"
+  fancynpcs_feature_flags_entry: " <#848484>{number}. {primaryColor}{name} <#848484>({id})<dark_gray>: {state}"
+  fancynpcs_feature_flags_footer: "<newline><dark_gray><st>-------------</st>  {secondaryColor}共显示 {primaryColor}{total_formatted}{secondaryColor} 项  <dark_gray><st>-------------</st>"
+  fancynpcs_test_success: "{successColor}全部 {count} 项测试均已通过（由 {player} 于 {time} 运行）。"
+  fancynpcs_test_failure: "{errorColor}部分测试未通过（由 {player} 于 {time} 运行）。"
+  fancynpcs_skin_system_restart_schedulers_success: "{successColor}皮肤任务调度器已重启。"
+  fancynpcs_skin_system_scheduler_status: "{successColor}状态（{scheduler}）：{status}"
+  fancynpcs_skin_system_clear_queues_success: "{successColor}皮肤生成队列已清空。"
+  fancynpcs_skin_system_clear_cache_success: "{successColor}皮肤缓存已清空。"
+  fancynpcs_skin_system_clear_uuid_cache_success: "{successColor}UUID 缓存已清空。"
+
+  # 命令（npc help）
+  npc_help_page_header: "<dark_gray><st>-------------</st>  {primaryColor}FancyNpcs{secondaryColor} 命令（{primaryColor}{page}{secondaryColor}/{primaryColor}{max_page}{secondaryColor}）  <dark_gray><st>--------------</st><newline>"
+  npc_help_page_footer: "<newline><dark_gray><st>-----------</st>  {secondaryColor}点击{primaryColor}<click:OPEN_URL:https://fancyinnovations.com/docs/minecraft-plugins/fancynpcs/commands/npc>这里</click>{secondaryColor}打开文档  <dark_gray><st>-----------</st>"
+  npc_help_contents:
+    - "<hover:show_text:'{secondaryColor}向列表添加一个新动作。'>{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}add {secondaryColor}(动作类型) [值]"
+    - "<hover:show_text:'{secondaryColor}在列表的指定位置之后添加一个新动作。'>{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}add_after {secondaryColor}(序号) (动作类型) [值]"
+    - "<hover:show_text:'{secondaryColor}在列表的指定位置之前添加一个新动作。'>{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}add_before {secondaryColor}(序号) (动作类型) [值]"
+    - "<hover:show_text:'{secondaryColor}清空指定触发条件下的所有动作。'>{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}clear"
+    - "<hover:show_text:'{secondaryColor}列出指定触发条件下的所有动作。'>{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}list"
+    - "<hover:show_text:'{secondaryColor}将指定序号的动作下移一位。'>{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}move_down {secondaryColor}(序号)"
+    - "<hover:show_text:'{secondaryColor}将指定序号的动作上移一位。'>{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}move_up {secondaryColor}(序号)"
+    - "<hover:show_text:'{secondaryColor}从列表中移除指定动作。'>{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}remove {secondaryColor}(序号)"
+    - "<hover:show_text:'{secondaryColor}在列表的指定位置添加一个新动作。'>{primaryColor}/npc action {secondaryColor}(NPC名称) (触发条件) {primaryColor}set {secondaryColor}(序号) (动作类型) [值]"
+    - "<hover:show_text:'{secondaryColor}设置 NPC 的一项属性。'>{primaryColor}/npc attribute {secondaryColor}(NPC名称) {primaryColor}set {secondaryColor}(属性) (值)"
+    - "<hover:show_text:'{secondaryColor}列出 NPC 所有已修改的属性。'>{primaryColor}/npc attribute {secondaryColor}(NPC名称) {primaryColor}list"
+    - "<hover:show_text:'{secondaryColor}设置 NPC 是否会与其他实体发生碰撞。'>{primaryColor}/npc collidable {secondaryColor}(NPC名称) [开关状态]"
+    - "<hover:show_text:'{secondaryColor}复制指定的 NPC。'>{primaryColor}/npc copy {secondaryColor}(NPC名称) (新名称)"
+    - "<hover:show_text:'{secondaryColor}将 NPC 移到所在方块的中心。'>{primaryColor}/npc center {secondaryColor}(NPC名称)"
+    - "<hover:show_text:'{secondaryColor}创建一个 NPC，可通过选项自定义。'>{primaryColor}/npc create {secondaryColor}(NPC名称) [--type] [--location] [--world]"
+    - "<hover:show_text:'{secondaryColor}更改 NPC 的显示名称，支持 MiniMessage、PlaceholderAPI 和 MiniPlaceholders。'>{primaryColor}/npc displayname {secondaryColor}(NPC名称) (显示名称)"
+    - "<hover:show_text:'{secondaryColor}将 NPC 的装备槽位设为你主手中的物品、指定类型的物品，或清空该槽位。'>{primaryColor}/npc equipment {secondaryColor}(NPC名称) {primaryColor}set {secondaryColor}(装备槽) (@hand | @none | 物品)"
+    - "<hover:show_text:'{secondaryColor}清空 NPC 的所有装备槽位。'>{primaryColor}/npc equipment {secondaryColor}(NPC名称) {primaryColor}clear"
+    - "<hover:show_text:'{secondaryColor}列出 NPC 的所有装备。'>{primaryColor}/npc equipment {secondaryColor}(NPC名称) {primaryColor}list"
+    - "<hover:show_text:'{secondaryColor}设置 NPC 是否发光及其发光颜色。'>{primaryColor}/npc glowing {secondaryColor}(NPC名称) (disabled | 颜色)"
+    - "<hover:show_text:'{secondaryColor}显示指定 NPC 的详细信息。'>{primaryColor}/npc info {secondaryColor}(NPC名称)"
+    - "<hover:show_text:'{secondaryColor}设置 NPC 两次交互之间的冷却时间。'>{primaryColor}/npc interaction_cooldown {secondaryColor}(NPC名称) (disabled | 时长)"
+    - "<hover:show_text:'{secondaryColor}列出所有世界中的 NPC，支持筛选和排序。'>{primaryColor}/npc list {secondaryColor}[--type] [--sort]"
+    - "<hover:show_text:'{secondaryColor}将指定的 NPC 传送到你的位置。'>{primaryColor}/npc move_here {secondaryColor}(NPC名称)"
+    - "<hover:show_text:'{secondaryColor}将 NPC 传送到指定位置。'>{primaryColor}/npc move_to {secondaryColor}(NPC名称) (x) (y) (z) [世界]"
+    - "<hover:show_text:'{secondaryColor}列出你所在世界中的 NPC，支持筛选和排序。'>{primaryColor}/npc nearby {secondaryColor}[--radius] [--type] [--sort]"
+    - "<hover:show_text:'{secondaryColor}删除指定的 NPC。'>{primaryColor}/npc remove {secondaryColor}(NPC名称)"
+    - "<hover:show_text:'{secondaryColor}调整 NPC 的朝向（偏航角和俯仰角）。'>{primaryColor}/npc rotate {secondaryColor}(NPC名称) (水平角度) (俯仰角度)"
+    - "<hover:show_text:'{secondaryColor}调整 NPC 的体型缩放倍率。'>{primaryColor}/npc scale {secondaryColor}(NPC名称) (缩放倍率)"
+    - "<hover:show_text:'{secondaryColor}设置 NPC 是否显示在玩家列表中，仅适用于 PLAYER 类型的 NPC。<newline><newline>{errorColor}更改后可能需要重新连接服务器才会生效。'>{primaryColor}/npc show_in_tab {secondaryColor}(NPC名称) (开关状态)"
+    - "<hover:show_text:'{secondaryColor}更改 NPC 的皮肤。<newline>{secondaryColor}支持 PlaceholderAPI 和 MiniPlaceholders。<newline><newline>{primaryColor}@none <dark_gray>- {secondaryColor}移除皮肤<newline>{primaryColor}@mirror <dark_gray>- {secondaryColor}显示查看者自己的皮肤<newline>{primaryColor}(名称) <dark_gray>- {secondaryColor}任意玩家的用户名<newline>{primaryColor}(链接) <dark_gray>- {secondaryColor}皮肤贴图的 URL'>{primaryColor}/npc skin {secondaryColor}(NPC名称) (@none | @mirror | 正版用户名 | 链接) [--slim]"
+    - "<hover:show_text:'{secondaryColor}将你传送到指定的 NPC 身旁。'>{primaryColor}/npc teleport {secondaryColor}(NPC名称)"
+    - "<hover:show_text:'{secondaryColor}设置 NPC 是否面向范围内的玩家。'>{primaryColor}/npc turn_to_player {secondaryColor}(NPC名称) (开关状态)"
+    - "<hover:show_text:'{secondaryColor}设置 NPC 会在多远的范围内转向玩家。'>{primaryColor}/npc turn_to_player_distance {secondaryColor}(NPC名称) (距离)"
+    - "<hover:show_text:'{secondaryColor}更改 NPC 的实体类型。'>{primaryColor}/npc type {secondaryColor}(NPC名称) (类型)"
+    - "<hover:show_text:'{secondaryColor}设置 NPC 的可见模式，决定哪些玩家能看到它。'>{primaryColor}/npc visibility {secondaryColor}(NPC名称) (all | permission_required | manual)"
+    - "<hover:show_text:'{secondaryColor}设置 NPC 的可见距离。'>{primaryColor}/npc visibility_distance {secondaryColor}(NPC名称) (default | 距离 | ...)"
+
+  # 命令（npc action）
+  npc_action_add_success: "已添加动作。当前共有 {primaryColor}{total}{secondaryColor} 个动作。"
+  npc_action_add_before_success: "已在第 {primaryColor}{number}{secondaryColor} 个动作前添加新动作。当前共有 {primaryColor}{total}{secondaryColor} 个动作。"
+  npc_action_add_after_success: "已在第 {primaryColor}{number}{secondaryColor} 个动作后添加新动作。当前共有 {primaryColor}{total}{secondaryColor} 个动作。"
+  npc_action_add_op_warning: "{warningColor}<b>注意：</b> {secondaryColor}“player_command_as_op”动作已移除，因为它会在执行命令时临时授予玩家 OP 权限，存在安全风险。请改用“player_command”，并确认玩家无需 OP 权限也能执行相应命令。如果现有 NPC 仍在使用“player_command_as_op”，请尽快改为“player_command”，以免留下安全隐患。“player_command_as_op”将不再生效。"
+  npc_action_set_success: "已更新第 {primaryColor}{number}{secondaryColor} 个动作。当前共有 {primaryColor}{total}{secondaryColor} 个动作。"
+  npc_action_set_failure: "{errorColor}第 {primaryColor}{number}{errorColor} 个动作不存在。"
+  npc_action_move_up_success: "已上移第 {primaryColor}{number}{secondaryColor} 个动作。"
+  npc_action_move_up_failure: "{errorColor}第 {primaryColor}{number}{errorColor} 个动作已在列表顶部。"
+  npc_action_move_down_success: "已下移第 {primaryColor}{number}{secondaryColor} 个动作。"
+  npc_action_move_down_failure: "{errorColor}第 {primaryColor}{number}{errorColor} 个动作已在列表底部。"
+  npc_action_requires_value: "{errorColor}必须为此动作指定一个值。"
+  npc_action_remove_success: "已移除第 {primaryColor}{number}{secondaryColor} 个动作。当前共有 {primaryColor}{total}{secondaryColor} 个动作。"
+  npc_action_remove_failure: "{errorColor}第 {primaryColor}{number}{errorColor} 个动作不存在。"
+  npc_action_clear_success: "已清空动作。"
+  npc_action_list_header: "<dark_gray><st>---------------------</st>  {secondaryColor}动作列表  <dark_gray><st>---------------------</st><newline>"
+  npc_action_list_entry: " <#848484>{number}. {primaryColor}{action}<dark_gray>: {secondaryColor}{value}"
+  npc_action_list_footer: "<newline><dark_gray><st>-------------</st>  {secondaryColor}共显示 {primaryColor}{total}{secondaryColor} 项  <dark_gray><st>-------------</st>"
+  npc_action_list_failure_empty: "{errorColor}列表中没有动作。请使用 {primaryColor}/npc action (npc) (trigger) add (action){errorColor} 添加第一个动作。"
+
+  # 命令（npc attribute）
+  npc_attribute_set: "已将属性 {primaryColor}{attribute}{secondaryColor} 设为 {primaryColor}{value}{secondaryColor}。"
+  npc_attribute_set_invalid_for_this_entity_type: "{errorColor}属性 {primaryColor}{input}{errorColor} 不适用于此实体类型。"
+  npc_attribute_list_header: "<dark_gray><st>--------------------</st>  {secondaryColor}属性列表  <dark_gray><st>--------------------</st><newline>"
+  npc_attribute_list_entry: " <#848484>{attribute}<dark_gray>: {primaryColor}{value}"
+  npc_attribute_list_footer: "<newline><dark_gray><st>---------------------------------------------------</st>"
+  npc_attribute_list_failure_empty: "{errorColor}尚未设置任何属性。请使用 {primaryColor}/npc attribute (npc) set (attribute) (value){errorColor} 设置属性。"
+
+  # 命令（npc collidable）
+  npc_collidable_set_true: "NPC {primaryColor}{npc}{secondaryColor} 现在可以发生碰撞{secondaryColor}。"
+  npc_collidable_set_false: "NPC {primaryColor}{npc}{secondaryColor} 不再发生碰撞{secondaryColor}。"
+
+  # 命令（npc copy）
+  npc_copy_success: "已将 NPC {primaryColor}{npc}{secondaryColor} 复制为 {primaryColor}{new_npc}{secondaryColor}。"
+
+  # 命令（npc create）
+  npc_create_success: "已创建 NPC {primaryColor}{npc}{secondaryColor}。"
+  npc_create_failure_invalid_name: "{errorColor}名称含有非法字符或为空。只允许使用汉字、英文字母、数字和 {primaryColor}_ - /{errorColor}，不允许空格。"
+  npc_create_failure_already_exists: "{errorColor}NPC {primaryColor}{npc}{errorColor} 已存在。"
+  npc_create_failure_must_specify_location: "{errorColor}从控制台执行此命令时，必须指定 {primaryColor}--location{errorColor} 选项。"
+  npc_create_failure_must_specify_world: "{errorColor}从控制台执行此命令时，必须指定 {primaryColor}--world{errorColor} 选项。"
+
+  # 命令（npc displayname）
+  npc_displayname_set_name: "NPC {primaryColor}{npc}{secondaryColor} 的显示名称已设为 <reset>{name}<reset>{secondaryColor}。"
+  npc_displayname_set_empty: "NPC {primaryColor}{npc}{secondaryColor} 不再显示名称。"
+
+  # 命令（npc equipment）
+  npc_equipment_set_item: "已将装备槽位 {primaryColor}{slot}{secondaryColor} 设为 <reset><item>{secondaryColor}。"
+  npc_equipment_set_empty: "已清空装备槽位 {primaryColor}{slot}{secondaryColor}。"
+  npc_equipment_set_failure_invalid_slot: "{errorColor}参数 {primaryColor}{input}{errorColor} 不是有效的装备槽位。"
+  npc_equipment_clear_success: "已清空所有装备。"
+  npc_equipment_list_header: "<dark_gray><st>--------------------</st>  {secondaryColor}装备列表  <dark_gray><st>--------------------</st><newline>"
+  npc_equipment_list_entry: " <#848484>{slot}<dark_gray>: <reset><item>"
+  npc_equipment_list_footer: "<newline><dark_gray><st>---------------------------------------------------</st>"
+  npc_equipment_list_failure_empty: "{errorColor}尚未设置任何装备。请使用 {primaryColor}/npc equipment (npc) set (slot) (@hand | @none | material){errorColor} 设置装备槽位。"
+
+  # 命令（npc fix）
+  npc_fix_success: "已尝试修复 NPC {primaryColor}{npc}{secondaryColor}。如果问题仍然存在，请向我们反馈。"
+
+  # 命令（npc glowing）
+  npc_glowing_set_true: "NPC {primaryColor}{npc}{secondaryColor} 已开启发光效果。"
+  npc_glowing_set_false: "NPC {primaryColor}{npc}{secondaryColor} 已关闭发光效果。"
+  npc_glowing_set_color_success: "NPC {primaryColor}{npc}{secondaryColor} 的发光颜色已设为{color}{secondaryColor}。"
+  npc_glowing_set_color_failure_invalid_color: "{errorColor}指定的值 {primaryColor}{input}{errorColor} 不是有效的颜色。"
+
+  # 命令（npc info）
+  npc_info_general:
+    - ""
+    - "<hover:show_text:'{secondaryColor}NPC 唯一且永久不变的标识。'><#848484>标识</hover>：<hover:show_text:'{secondaryColor}点击将 UUID 复制到剪贴板。'><click:copy_to_clipboard:'{id}'>{primaryColor}{id}</click></hover>"
+    - "<hover:show_text:'{secondaryColor}创建此 NPC 的玩家标识。'>{secondaryColor}创建者</hover>：<hover:show_text:'{secondaryColor}点击将创建者的 UUID 复制到剪贴板。'><click:copy_to_clipboard:'{creator_uuid}'>{primaryColor}{creator_uuid_short}{secondaryColor}（{creator_name}）</click></hover>"
+    - "<hover:show_text:'{secondaryColor}在命令中使用的 NPC 名称。未设置显示名称时，此名称会显示在 NPC 头顶。'><#848484>名称</hover>：{primaryColor}{name}"
+    - "<hover:show_text:'{secondaryColor}显示在 NPC 头顶的名称。'>{secondaryColor}显示名称</hover>：<reset>{displayname}<reset>"
+    - "<hover:show_text:'{secondaryColor}NPC 的实体类型。'><#848484>类型</hover><dark_gray>：{primaryColor}{type}"
+    - "<hover:show_text:'{secondaryColor}NPC 当前所在的位置。'>{secondaryColor}位置</hover>：<hover:show_text:'{secondaryColor}点击将坐标复制到剪贴板。'><click:copy_to_clipboard:'{location_x} {location_y} {location_z}'>{primaryColor}{location_x}{secondaryColor}, {primaryColor}{location_y}{secondaryColor}, {primaryColor}{location_z}{secondaryColor}，所在世界：{primaryColor}{world}</click></hover>"
+    - "<hover:show_text:'{secondaryColor}NPC 的发光状态。可设为某种{primaryColor}颜色{secondaryColor}，或用 {errorColor}disabled{secondaryColor} 禁用。'><#848484>发光</hover><dark_gray>：{glow}"
+    - "<hover:show_text:'{secondaryColor}NPC 是否转向玩家。可设为 {successColor}true{secondaryColor} 或 {errorColor}false{secondaryColor}。'>{secondaryColor}转向玩家</hover><dark_gray>：{is_turn_to_player}"
+    - "<hover:show_text:'{secondaryColor}NPC 是否显示在玩家列表中。可设为 {successColor}true{secondaryColor} 或 {errorColor}false{secondaryColor}。'><#848484>在玩家列表中显示</hover>：{is_show_in_tab}"
+    - "<hover:show_text:'{secondaryColor}NPC 是否会发生碰撞。可设为 {successColor}true{secondaryColor} 或 {errorColor}false{secondaryColor}。'>{secondaryColor}碰撞</hover><dark_gray>：{is_collidable}"
+    - "<hover:show_text:'{secondaryColor}NPC 是否显示查看者自己的皮肤。可设为 {successColor}true{secondaryColor} 或 {errorColor}false{secondaryColor}。'><#848484>皮肤镜像</hover><dark_gray>：{primaryColor}{is_skin_mirror}"
+    - "<hover:show_text:'{secondaryColor}两次交互之间的冷却时间。'>{secondaryColor}交互冷却</hover><dark_gray>：{primaryColor}{interaction_cooldown}"
+    - "<hover:show_text:'{secondaryColor}NPC 的体型缩放倍率。'><#848484>体型缩放</hover><dark_gray>：{primaryColor}x{scale}"
+    - "<hover:show_text:'{secondaryColor}能够看到 NPC 的距离。'>{secondaryColor}可见距离</hover><dark_gray>：{primaryColor}{visibility_distance}"
+    - ""
+    - "<hover:show_text:'{secondaryColor}NPC 的装备。<newline>选择 {primaryColor}[点击查看]{secondaryColor} 可浏览详情。'>{secondaryColor}装备</hover><dark_gray>：<click:RUN_COMMAND:'/npc equipment {name} list'>{primaryColor}[点击查看]</click>"
+    - "<hover:show_text:'{secondaryColor}NPC 已修改的属性。<newline>选择 {primaryColor}[点击查看]{secondaryColor} 可浏览详情。'><#848484>属性</hover><dark_gray>：<click:RUN_COMMAND:'/npc attribute {name} list'>{primaryColor}[点击查看]</click>"
+    - ""
+    - "<hover:show_text:'{secondaryColor}使用 {primaryColor}/npc action (npc) (trigger){secondaryColor} 下的子命令管理动作。'>{secondaryColor}此 NPC 共有 {primaryColor}{actions_total}{secondaryColor} 个动作。</hover>"
+    - ""
+    - "{primaryColor}没找到想看的信息？"
+    - "打开聊天窗口即可查看全部信息。"
+    - ""
+
+  # 命令（npc interaction_cooldown）
+  npc_interaction_cooldown_set: "交互冷却时间已设为 {primaryColor}{time}{secondaryColor}。"
+  npc_interaction_cooldown_disabled: "已关闭交互冷却。"
+
+  # 命令（npc list）
+  npc_list_header: "<dark_gray><st>------------------</st>  {secondaryColor}NPC 列表  <dark_gray><st>------------------</st><newline>"
+  npc_list_entry: " <#848484>{number}. <click:RUN_COMMAND:'/npc info {npc}'><hover:show_text:'{secondaryColor}点击查看详情。'>{primaryColor}{npc}</hover></click> <click:RUN_COMMAND:'/npc teleport {npc}'><hover:show_text:'{secondaryColor}点击传送。'><#848484>（{location_x}, {location_y}, {location_z}，所在世界：{world}）"
+  npc_list_footer: "<newline><dark_gray><st>----------</st>  {secondaryColor}已显示 {primaryColor}{count_formatted}{secondaryColor} 项，共 {primaryColor}{total_formatted}{secondaryColor} 项  <dark_gray><st>----------</st>"
+  npc_list_failure_sort_requires_player: "{errorColor}不能在控制台使用此排序方式。"
+  npc_list_failure_requires_world_flag: "{errorColor}从控制台执行此命令时，必须指定 {primaryColor}--world{errorColor} 选项。"
+
+  # 命令（npc move_here）
+  npc_move_here_success: "NPC {primaryColor}{npc}{secondaryColor} 已移到你的位置。"
+
+  # 命令（npc move_to）
+  npc_move_to_success: "NPC {primaryColor}{npc}{secondaryColor} 已移到坐标 {primaryColor}{x}{secondaryColor}, {primaryColor}{y}{secondaryColor}, {primaryColor}{z}{secondaryColor}，所在世界：{primaryColor}{world}{secondaryColor}。"
+  npc_move_to_failure_must_specify_world: "{errorColor}从控制台执行此命令时，必须指定世界。"
+
+  # 命令（npc nearby）
+  npc_nearby_header: "<dark_gray><st>----------------</st>  {secondaryColor}附近的 NPC  <dark_gray><st>-----------------</st><newline>"
+  npc_nearby_entry: " <#848484>{number}. <click:RUN_COMMAND:'/npc info {npc}'><hover:show_text:'{secondaryColor}点击查看详情。'>{primaryColor}{npc}</hover></click> <click:RUN_COMMAND:'/npc teleport {npc}'><hover:show_text:'{secondaryColor}点击传送。'><#848484>（距离 {distance} 格）</hover></click>"
+  npc_nearby_footer: "<newline><dark_gray><st>----------</st>  {secondaryColor}已显示 {primaryColor}{count_formatted}{secondaryColor} 项，共 {primaryColor}{total_formatted}{secondaryColor} 项  <dark_gray><st>----------</st>"
+
+  # 命令（npc remove）
+  npc_remove_success: "已移除 NPC {primaryColor}{npc}{secondaryColor}。"
+
+  # 命令（npc rotate）
+  npc_rotate_set_success: "NPC {primaryColor}{npc}{secondaryColor} 的朝向已调整为偏航角 {primaryColor}{yaw}{secondaryColor}、俯仰角 {primaryColor}{pitch}{secondaryColor}。"
+
+  # 命令（npc scale）
+  npc_scale_set_success: "NPC {primaryColor}{npc}{secondaryColor} 的体型缩放倍率已设为 {primaryColor}{scale}{secondaryColor}。"
+
+  # 命令（npc visibility）
+  npc_visibility_set: "NPC {primaryColor}{npc}{secondaryColor} 的可见模式已设为 {primaryColor}{visibility}{secondaryColor}。"
+
+  # 命令（npc visibility_distance）
+  npc_visibility_distance_set_value: "NPC {primaryColor}{npc}{secondaryColor} 现在在 {primaryColor}{distance}{secondaryColor} 格内可见。"
+  npc_visibility_distance_set_default: "NPC {primaryColor}{npc}{secondaryColor} 现在使用默认可见距离：{primaryColor}{distance}{secondaryColor}。"
+  npc_visibility_distance_set_not_visible: "NPC {primaryColor}{npc}{secondaryColor} 现在不可见。"
+  npc_visibility_distance_set_always_visible: "NPC {primaryColor}{npc}{secondaryColor} 现在始终可见。"
+
+  # 命令（npc show_in_tab）
+  npc_show_in_tab_set_true: "NPC {primaryColor}{npc}{secondaryColor} 现在会显示在玩家列表中。"
+  npc_show_in_tab_set_false: "NPC {primaryColor}{npc}{secondaryColor} 不再显示在玩家列表中。"
+
+  # 命令（npc skin）
+  npc_skin_set: "NPC {primaryColor}{npc}{secondaryColor} 现在使用皮肤 {primaryColor}{name}{secondaryColor}。"
+  npc_skin_set_mirror: "NPC {primaryColor}{npc}{secondaryColor} 现在会向每位玩家显示该玩家自己的皮肤。"
+  npc_skin_set_none: "NPC {primaryColor}{npc}{secondaryColor} 不再使用任何皮肤。"
+  npc_skin_set_later: "<hover:show_text:'{primaryColor}超过 30 秒仍在加载？<newline>{secondaryColor}请检查控制台是否报错，确认设置无误后稍等片刻再试。'>{secondaryColor}皮肤预计将在几秒后应用…… <#848484>ℹ</hover>"
+  npc_skin_failure_invalid_url:
+    - "<click:open_url:'https://fancyinnovations.com/docs/minecraft-plugins/fancynpcs/faq#urls-as-skin'><hover:show_text:'{primaryColor}这是什么意思？<newline>{secondaryColor}点击此处查看详情。'>{errorColor}无法从指定的 URL 加载皮肤。"
+    - "请确认 URL 直接指向皮肤贴图文件。 <#848484>ℹ</hover></click>"
+  npc_skin_failure_invalid_file:
+    - "{errorColor}无法从指定文件加载皮肤。"
+    - "请确认指定路径下的文件存在。"
+  npc_skin_failure_invalid_username:
+    - "{errorColor}无法根据指定用户名加载皮肤。"
+    - "请确认此用户名对应有效的 Minecraft 账号。"
+  npc_skin_failure_invalid_placeholder:
+    - "<click:open_url:'https://fancyinnovations.com/docs/minecraft-plugins/fancynpcs/faq#placeholders-as-skin'><hover:show_text:'{primaryColor}这是什么意思？<newline>{secondaryColor}点击此处查看详情。'>{errorColor}无法从指定的占位符加载皮肤。"
+    - "请确认这个占位符在解析时"
+    - " {secondaryColor}不需要玩家实例。 <#848484>ℹ</hover>"
+
+  # 命令（npc teleport）
+  npc_teleport_success: "你已传送至 NPC {primaryColor}{npc}{secondaryColor}。"
+  npc_teleport_failure_exception: "{errorColor}传送至 NPC 时出错，请查看控制台。"
+  npc_teleport_failure_world_not_loaded: "{errorColor}无法传送至 NPC：目标世界尚未加载。"
+
+  # 命令（npc turn_to_player）
+  npc_turn_to_player_set_true: "NPC {primaryColor}{npc}{secondaryColor} 现在会转向玩家。"
+  npc_turn_to_player_set_false: "NPC {primaryColor}{npc}{secondaryColor} 不再转向玩家。"
+  npc_turn_to_player_distance_set: "NPC {primaryColor}{npc}{secondaryColor} 现在会转向 {primaryColor}{distance}{secondaryColor} 格范围内的玩家。"
+  npc_turn_to_player_distance_default: "NPC {primaryColor}{npc}{secondaryColor} 现在使用默认的转向距离：{primaryColor}{distance}{secondaryColor} 格。"
+  npc_turn_to_player_distance_invalid: "{errorColor}距离无效。请输入 -1（使用默认值）或正数。"
+
+  # 命令（npc type）
+  npc_type_success: "NPC {primaryColor}{npc}{secondaryColor} 的实体类型已改为 {primaryColor}{type}{secondaryColor}。"
+
+  # 命令（npc turn_to_player_distance）
+  turn_to_player_distance_current: "当前转向玩家的距离：{primaryColor}{distance} 格"
+  turn_to_player_distance_updated: "{successColor}转向玩家的距离已更新为 {primaryColor}{distance} 格"
+  turn_to_player_distance_failed: "{errorColor}无法更新转向玩家的距离。"
+
+  # 命令（npc center）
+  npc_center_success: "NPC {primaryColor}{npc}{secondaryColor} 已移到方块中心，坐标为 {primaryColor}{x}{secondaryColor}, {primaryColor}{y}{secondaryColor}, {primaryColor}{z}{secondaryColor}。"
+  npc_center_failure_no_location: "{errorColor}NPC {primaryColor}{npc}{errorColor} 没有有效的位置。"
+
+  # 命令（npcconvert）
+  npcconvert_plugin_not_found: "{errorColor}找不到源插件 {primaryColor}{source_plugin}{errorColor}，或该插件不受支持。"
+  npcconvert_success: "已将 {primaryColor}{converted_count}{secondaryColor} 个 NPC 从 {primaryColor}{source_plugin}{secondaryColor} 转换到 {primaryColor}FancyNpcs{secondaryColor}。"
+  npcconvert_no_npcs_found: "{errorColor}未在 {primaryColor}{source_plugin}{secondaryColor} 中找到可转换的 NPC。"

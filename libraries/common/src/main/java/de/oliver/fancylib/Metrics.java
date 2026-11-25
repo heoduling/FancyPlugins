@@ -61,6 +61,10 @@ public class Metrics {
      *     href="https://bstats.org/what-is-my-plugin-id">What is my plugin id?</a>
      */
     public Metrics(JavaPlugin plugin, int serviceId) {
+        this(plugin, serviceId, task -> Bukkit.getScheduler().runTask(plugin, task));
+    }
+
+    public Metrics(JavaPlugin plugin, int serviceId, Consumer<Runnable> submitTask) {
         this.plugin = plugin;
         // Get the config file
         File bStatsFolder = new File(plugin.getDataFolder().getParentFile(), "bStats");
@@ -101,7 +105,7 @@ public class Metrics {
                         enabled,
                         this::appendPlatformData,
                         this::appendServiceData,
-                        submitDataTask -> Bukkit.getScheduler().runTask(plugin, submitDataTask),
+                        submitTask,
                         plugin::isEnabled,
                         (message, error) -> this.plugin.getLogger().log(Level.WARNING, message, error),
                         (message) -> this.plugin.getLogger().log(Level.INFO, message),
@@ -261,7 +265,7 @@ public class Metrics {
         }
 
         public void shutdown() {
-            scheduler.shutdown();
+            scheduler.shutdownNow();
         }
 
         private void startSubmitting() {
@@ -294,6 +298,9 @@ public class Metrics {
         }
 
         private void submitData() {
+            if (scheduler.isShutdown()) {
+                return;
+            }
             final JsonObjectBuilder baseJsonBuilder = new JsonObjectBuilder();
             appendPlatformDataConsumer.accept(baseJsonBuilder);
             final JsonObjectBuilder serviceJsonBuilder = new JsonObjectBuilder();
@@ -329,6 +336,8 @@ public class Metrics {
             }
             String url = String.format(REPORT_URL, platform);
             HttpsURLConnection connection = (HttpsURLConnection) new URL(url).openConnection();
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
             // Compress the data to save bandwidth
             byte[] compressedData = compress(data.toString());
             connection.setRequestMethod("POST");

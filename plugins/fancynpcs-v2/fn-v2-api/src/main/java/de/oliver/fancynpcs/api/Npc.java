@@ -12,15 +12,19 @@ import de.oliver.fancynpcs.api.utils.Interval.Unit;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.IllegalPluginAccessException;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public abstract class Npc {
 
@@ -50,10 +54,19 @@ public abstract class Npc {
 
     public abstract void create();
 
+    public Consumer<String> createConsoleCommandDispatcher() {
+        return command -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+    }
+
     public abstract void spawn(Player player);
 
+    @ApiStatus.Internal
+    public void spawn(Player player, World viewerWorld) {
+        spawn(player);
+    }
+
     public void spawnForAll() {
-        FancyNpcsPlugin.get().getNpcThread().submit(() -> {
+        submitNpcWork(() -> {
             for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
                 spawn(onlinePlayer);
             }
@@ -75,6 +88,12 @@ public abstract class Npc {
      * @return True if the NPC should be visible for the player, otherwise false.
      */
     protected boolean shouldBeVisible(Player player) {
+        return shouldBeVisible(player, player.getLocation());
+    }
+
+    /** Evaluates visibility on the viewer's owning thread with an already sampled location. */
+    @ApiStatus.Internal
+    public boolean shouldBeVisible(Player player, Location viewerLocation) {
         if (!data.getVisibility().canSee(player, this)) {
             return false;
         }
@@ -89,15 +108,16 @@ public abstract class Npc {
             return false;
         }
 
-        if (data.getLocation() == null) {
+        Location npcLocation = data.getLocation();
+        if (npcLocation == null) {
             return false;
         }
 
-        if (player.getLocation().getWorld() != data.getLocation().getWorld()) {
+        if (viewerLocation.getWorld() != npcLocation.getWorld()) {
             return false;
         }
 
-        if (visibilityDistance != Integer.MAX_VALUE && data.getLocation().distanceSquared(player.getLocation()) > visibilityDistance * visibilityDistance) {
+        if (visibilityDistance != Integer.MAX_VALUE && npcLocation.distanceSquared(viewerLocation) > (double) visibilityDistance * visibilityDistance) {
             return false;
         }
 
@@ -107,25 +127,44 @@ public abstract class Npc {
     }
 
     public void checkAndUpdateVisibility(Player player) {
-        FancyNpcsPlugin.get().getNpcThread().submit(() -> {
-            boolean shouldBeVisible = shouldBeVisible(player);
-            boolean wasVisible = isVisibleForPlayer.getOrDefault(player.getUniqueId(), false);
+        FancyNpcsPlugin.get().requestVisibilityCheck(this, player);
+    }
 
-            if (shouldBeVisible && !wasVisible) {
-                spawn(player);
-
-                // Respawn the npc to fix visibility issues on Folia
-                if (ServerSoftware.isFolia() && FancyNpcsPlugin.get().getFeatureFlagConfig().getFeatureFlag("enable-folia-visibility-fix").isEnabled()) {
-                    FancyNpcsPlugin.get().getNpcThread().schedule(() -> {
-                        remove(player);
-                        spawn(player);
-                    }, 100, TimeUnit.MILLISECONDS);
-                }
-
-            } else if (!shouldBeVisible && wasVisible) {
-                remove(player);
+    @ApiStatus.Internal
+    public void applyVisibility(Player player, World viewerWorld, boolean visible) {
+        boolean wasVisible = isShownFor(player);
+        if (visible && !wasVisible) {
+            spawn(player, viewerWorld);
+            var owner = FancyNpcsPlugin.get();
+            if (ServerSoftware.isFolia() && owner.getFeatureFlagConfig().getFeatureFlag("enable-folia-visibility-fix").isEnabled()) {
+                owner.getNpcThread().schedule(() -> runOnViewerOwner(owner, player, () -> {
+                    Location location = player.getLocation();
+                    if (!shouldBeVisible(player, location)) return;
+                    submitNpcWork(() -> {
+                        if (isShownFor(player) && owner.getNpcManager().getNpcById(data.getId()) == this) {
+                            remove(player);
+                            spawn(player, location.getWorld());
+                        }
+                    });
+                }, () -> {}), 100, TimeUnit.MILLISECONDS);
             }
-        });
+        } else if (!visible && wasVisible) {
+            remove(player);
+        }
+    }
+
+    protected void submitNpcWork(Runnable task) {
+        var worker = FancyNpcsPlugin.get().getNpcThread();
+        if (worker.isShutdown()) {
+            return;
+        }
+        try {
+            worker.execute(task);
+        } catch (RejectedExecutionException rejected) {
+            if (!worker.isShutdown()) {
+                throw rejected;
+            }
+        }
     }
 
     public void checkAndUpdateVisibilityForAll() {
@@ -173,6 +212,9 @@ public abstract class Npc {
     }
 
     public void interact(Player player, ActionTrigger actionTrigger) {
+        if (FancyNpcsPlugin.get().getNpcThread().isShutdown()) {
+            return;
+        }
         if (data.getInteractionCooldown() > 0) {
             final long interactionCooldownMillis = (long) (data.getInteractionCooldown() * 1000);
             final long lastInteractionMillis = lastPlayerInteraction.getOrDefault(player.getUniqueId(), 0L);
@@ -232,6 +274,17 @@ public abstract class Npc {
         return isLookingAtPlayer;
     }
 
+    @ApiStatus.Internal
+    public boolean forgetViewer(UUID viewer) {
+        isVisibleForPlayer.remove(viewer);
+        isTeamCreated.remove(viewer);
+        resetLookDirection(viewer);
+        return Boolean.TRUE.equals(isLookingAtPlayer.remove(viewer));
+    }
+
+    protected void resetLookDirection(UUID viewer) {
+    }
+
     public Map<UUID, Long> getLastPlayerInteraction() {
         return lastPlayerInteraction;
     }
@@ -248,6 +301,31 @@ public abstract class Npc {
         return saveToFile;
     }
 
+    @ApiStatus.Internal
+    public static void runOnViewerOwner(FancyNpcsPlugin owner, Player player, Runnable task, Runnable unavailable) {
+        if (!owner.getPlugin().isEnabled() || owner.getNpcThread().isShutdown()) {
+            unavailable.run();
+            return;
+        }
+        Runnable guarded = () -> {
+            if (owner.getNpcThread().isShutdown() || !player.isConnected()) unavailable.run();
+            else task.run();
+        };
+        try {
+            if (ServerSoftware.isFolia()) {
+                if (Bukkit.isOwnedByCurrentRegion(player)) guarded.run();
+                else if (player.getScheduler().run(owner.getPlugin(), ignored -> guarded.run(), unavailable) == null) unavailable.run();
+            } else if (Bukkit.isPrimaryThread()) {
+                guarded.run();
+            } else {
+                Bukkit.getScheduler().runTask(owner.getPlugin(), guarded);
+            }
+        } catch (IllegalPluginAccessException disabled) {
+            unavailable.run();
+            if (owner.getPlugin().isEnabled() && !owner.getNpcThread().isShutdown()) throw disabled;
+        }
+    }
+
     public void setSaveToFile(boolean saveToFile) {
         this.saveToFile = saveToFile;
     }
@@ -260,12 +338,22 @@ public abstract class Npc {
      */
     @ApiStatus.Internal
     protected void runOnPlayerScheduler(Player player, Runnable task) {
+        var owner = FancyNpcsPlugin.get();
+        if (!owner.getPlugin().isEnabled() || owner.getNpcThread().isShutdown()) {
+            return;
+        }
         if (ServerSoftware.isFolia()) {
-            player.getScheduler().run(
-                    FancyNpcsPlugin.get().getPlugin(),
-                    (t) -> task.run(),
-                    null
-            );
+            try {
+                player.getScheduler().run(owner.getPlugin(), ignored -> {
+                    if (!owner.getNpcThread().isShutdown()) {
+                        task.run();
+                    }
+                }, null);
+            } catch (IllegalPluginAccessException disabled) {
+                if (owner.getPlugin().isEnabled() && !owner.getNpcThread().isShutdown()) {
+                    throw disabled;
+                }
+            }
             return;
         }
 

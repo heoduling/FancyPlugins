@@ -19,6 +19,8 @@ dependencies {
 tasks {
     shadowJar {
         archiveClassifier.set("")
+        // Keep the API's standalone shaded archive separate from the normal project dependency.
+        destinationDirectory.set(layout.buildDirectory.dir("shaded"))
 
         relocate("org.lushplugins.chatcolorhandler", "de.oliver.fancynpcs.libs.chatcolorhandler")
     }

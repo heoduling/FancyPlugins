@@ -3,7 +3,6 @@ package de.oliver.fancynpcs.api.actions.types;
 import de.oliver.fancynpcs.api.FancyNpcsPlugin;
 import de.oliver.fancynpcs.api.actions.NpcAction;
 import de.oliver.fancynpcs.api.actions.executor.ActionExecutionContext;
-import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 import org.lushplugins.chatcolorhandler.common.parser.Parsers;
 import org.lushplugins.chatcolorhandler.paper.PaperColor;
@@ -35,11 +34,15 @@ public class ConsoleCommandAction extends NpcAction {
 
         String finalCommand = PaperColor.handler().translateRaw(command, context.getPlayer(), Parsers::placeholder);
 
-        FancyNpcsPlugin.get().getScheduler().runTask(null, () -> {
+        FancyNpcsPlugin plugin = FancyNpcsPlugin.get();
+        plugin.getScheduler().runTask(null, () -> {
+            if (!plugin.getPlugin().isEnabled()) {
+                return;
+            }
             try {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand);
+                context.dispatchConsoleCommand(finalCommand);
             } catch (Exception e) {
-                FancyNpcsPlugin.get().getFancyLogger().warn("Failed to execute command: " + finalCommand);
+                plugin.getFancyLogger().warn("Failed to execute command: " + finalCommand);
             }
         });
     }

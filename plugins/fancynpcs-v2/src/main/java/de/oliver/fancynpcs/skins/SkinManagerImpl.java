@@ -12,6 +12,7 @@ import de.oliver.fancynpcs.api.skins.SkinData;
 import de.oliver.fancynpcs.api.skins.SkinGeneratedEvent;
 import de.oliver.fancynpcs.api.skins.SkinLoadException;
 import de.oliver.fancynpcs.api.skins.SkinManager;
+import de.oliver.fancynpcs.skins.mojang.MojangQueue;
 import de.oliver.fancynpcs.skins.cache.SkinCache;
 import de.oliver.fancynpcs.skins.cache.SkinCacheData;
 import de.oliver.fancynpcs.skins.uuidcache.UUIDCache;
@@ -22,7 +23,6 @@ import net.skinsrestorer.api.property.SkinProperty;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.server.PluginDisableEvent;
 import org.lushplugins.chatcolorhandler.paper.PaperColor;
 import org.mineskin.data.Variant;
 import org.mineskin.request.GenerateRequest;
@@ -444,13 +444,6 @@ public class SkinManagerImpl implements SkinManager, Listener {
         cacheSkin(event.getSkin());
     }
 
-    @EventHandler
-    public void onPluginDisable(PluginDisableEvent event) {
-        if (event.getPlugin() == FancyNpcs.getInstance()) {
-            shutdown();
-        }
-    }
-
     private SkinData tryToGetFromCache(String identifier, SkinData.SkinVariant variant) {
         FancyNpcs.getInstance().getFancyLogger().debug("Trying to get skin from mem cache: " + identifier);
 
@@ -493,9 +486,14 @@ public class SkinManagerImpl implements SkinManager, Listener {
     }
 
     public void shutdown() {
+        lookupExecutor.shutdownNow();
         activeLookups.values().forEach(future -> future.cancel(true));
         activeLookups.clear();
-        lookupExecutor.shutdownNow();
+        httpClient.shutdown();
+        if (mojangQueue instanceof MojangQueue queue) {
+            queue.shutdown();
+        }
+        EXECUTOR.shutdownNow();
     }
 
     public SkinCache getFileCache() {

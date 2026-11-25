@@ -1,6 +1,5 @@
 package de.oliver.fancynpcs.commands;
 
-import de.oliver.fancylib.translations.Language;
 import de.oliver.fancylib.translations.Translator;
 import de.oliver.fancylib.translations.message.SimpleMessage;
 import de.oliver.fancynpcs.FancyNpcs;
@@ -22,33 +21,46 @@ public final class FancyNpcsCMD {
     @Command("fancynpcs version")
     @Permission("fancynpcs.command.fancynpcs.version")
     public void onVersion(final CommandSender sender) {
-        plugin.getVersionConfig().checkVersionAndDisplay(sender, false);
+        plugin.sendVersionInfo(sender, false);
     }
 
     @Command("fancynpcs reload")
     @Permission("fancynpcs.command.fancynpcs.reload")
     public void onReload(final CommandSender sender) {
-        // Reloading all defined languages.
-        translator.loadLanguages(plugin.getDataFolder().getAbsolutePath());
-        // Reloading plugin configuration.
         plugin.getFancyNpcConfig().reload();
-        // Getting the selected language from configuration. Defaults to fallback language.
-        final Language selectedLanguage = translator.getLanguages().stream()
-                .filter(language -> language.getLanguageName().equals(plugin.getFancyNpcConfig().getLanguage()))
-                .findFirst().orElse(translator.getFallbackLanguage());
-        translator.setSelectedLanguage(selectedLanguage);
+        plugin.loadTranslations();
         // Reloading all NPCs.
         // NOTE: This sometimes creates duplicated NPCs on the client-side.
-        plugin.getNpcManagerImpl().reloadNpcs();
-        // Sending success message to the sender.
-        translator.translate("fancynpcs_reload_success").withPrefix().send(sender);
+        if (plugin.getNpcManagerImpl().reloadFromStorage()) {
+            translator.translate("fancynpcs_reload_success").withPrefix().send(sender);
+        } else {
+            translator.translate("fancynpcs_reload_failure").withPrefix().send(sender);
+        }
+    }
+
+    @Command("fancynpcs prepare_unload")
+    @Permission("fancynpcs.command.fancynpcs.reload")
+    public void onPrepareUnload(final CommandSender sender) {
+        var hotUnload = plugin.getHotUnload();
+        if (hotUnload == null) {
+            translator.translate("fancynpcs_unload_preparation_unsupported").withPrefix().send(sender);
+            return;
+        }
+        hotUnload.prepare(sender);
     }
 
     @Command("fancynpcs save")
     @Permission("fancynpcs.command.fancynpcs.save")
     public void onSave(final CommandSender sender) {
-        plugin.getNpcManagerImpl().saveNpcs(true);
-        translator.translate("fancynpcs_save_success").withPrefix().send(sender);
+        var manager = plugin.getNpcManagerImpl();
+        var saved = manager.saveNpcsAsync(true);
+        if (saved == null) {
+            translator.translate("fancynpcs_save_unavailable").withPrefix().send(sender);
+            return;
+        }
+        manager.replyWhenStored(sender, saved,
+                () -> translator.translate("fancynpcs_save_success").withPrefix().send(sender),
+                () -> translator.translate("fancynpcs_save_failure").withPrefix().send(sender));
     }
 
     // NOTE: In the future, if there is more than a few feature flags, we might consider listing entries automatically by iterating, just like in 'list' sub-command.
@@ -58,19 +70,19 @@ public final class FancyNpcsCMD {
         translator.translate("fancynpcs_feature_flags_header").send(sender);
         translator.translate("fancynpcs_feature_flags_entry")
                 .replace("number", "1")
-                .replace("name", "Player NPCs")
+                .replace("name", translatedText("fancynpcs_feature_player_npcs"))
                 .replace("id", FancyNpcs.PLAYER_NPCS_FEATURE_FLAG.getName())
                 .replace("state", getTranslatedState(FancyNpcs.PLAYER_NPCS_FEATURE_FLAG.isEnabled()))
                 .send(sender);
         translator.translate("fancynpcs_feature_flags_entry")
                 .replace("number", "2")
-                .replace("name", "Native threads")
+                .replace("name", translatedText("fancynpcs_feature_native_threads"))
                 .replace("id", FancyNpcs.USE_NATIVE_THREADS_FEATURE_FLAG.getName())
                 .replace("state", getTranslatedState(FancyNpcs.USE_NATIVE_THREADS_FEATURE_FLAG.isEnabled()))
                 .send(sender);
         translator.translate("fancynpcs_feature_flags_entry")
                 .replace("number", "3")
-                .replace("name", "Debug mode")
+                .replace("name", translatedText("fancynpcs_feature_debug_mode"))
                 .replace("id", FancyNpcs.ENABLE_DEBUG_MODE_FEATURE_FLAG.getName())
                 .replace("state", getTranslatedState(FancyNpcs.ENABLE_DEBUG_MODE_FEATURE_FLAG.isEnabled()))
                 .send(sender);
@@ -84,6 +96,10 @@ public final class FancyNpcsCMD {
 
     // NOTE: Might need to be improved later down the line, should get work done for now.
     private @NotNull String getTranslatedState(final boolean bool) {
-        return (bool) ? ((SimpleMessage) translator.translate("enabled")).getMessage() : ((SimpleMessage) translator.translate("disabled")).getMessage();
+        return translatedText(bool ? "enabled" : "disabled");
+    }
+
+    private String translatedText(String key) {
+        return ((SimpleMessage) translator.translate(key)).getMessage();
     }
 }

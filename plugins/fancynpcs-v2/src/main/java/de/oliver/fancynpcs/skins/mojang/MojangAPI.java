@@ -31,6 +31,10 @@ public class MojangAPI {
                 .build();
     }
 
+    void shutdown() {
+        client.shutdown();
+    }
+
     public SkinData fetchSkin(String uuid, SkinData.SkinVariant variant) throws RatelimitException {
         FancyNpcsPlugin.get().getFancyLogger().debug("Fetching skin from MojangAPI for " + uuid);
 

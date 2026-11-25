@@ -2,79 +2,41 @@ package de.oliver.fancynpcs.tracker;
 
 import de.oliver.fancynpcs.FancyNpcs;
 import de.oliver.fancynpcs.api.Npc;
-import de.oliver.fancynpcs.api.NpcData;
 import de.oliver.fancynpcs.api.events.NpcStartLookingEvent;
 import de.oliver.fancynpcs.api.events.NpcStopLookingEvent;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
-import java.util.Collection;
+import java.util.UUID;
 
-public class TurnToPlayerTracker implements Runnable {
+final class TurnToPlayerTracker {
+    private final FancyNpcs plugin;
 
-    @Override
-    public void run() {
-        Collection<Npc> npcs = FancyNpcs.getInstance().getNpcManagerImpl().getAllNpcs();
-        int defaultTurnToPlayerDistance = FancyNpcs.getInstance().getFancyNpcConfig().getTurnToPlayerDistance();
+    TurnToPlayerTracker(FancyNpcs plugin) {
+        this.plugin = plugin;
+    }
 
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            Location playerLocation = player.getLocation();
-
-            for (Npc npc : npcs) {
-                NpcData npcData = npc.getData();
-                Location npcLocation = npcData.getLocation();
-
-                if (npcLocation == null || !npcLocation.getWorld().getName().equalsIgnoreCase(playerLocation.getWorld().getName())) {
-                    continue;
-                }
-
-                double distance = playerLocation.distance(npcLocation);
-                if (Double.isNaN(distance)) {
-                    continue;
-                }
-
-                // Get NPC-specific turn distance or fall back to default
-                int npcTurnDistance = npcData.getTurnToPlayerDistance();
-                int effectiveTurnDistance = (npcTurnDistance == -1) ? defaultTurnToPlayerDistance : npcTurnDistance;
-
-                if (npcData.isTurnToPlayer() && distance < effectiveTurnDistance) {
-                    // Calculate the base eye height for the entity type
-                    double baseEyeHeight = getEntityEyeHeight(npcData.getType());
-
-                    // Adjust the NPC location Y coordinate based on the scale
-                    Location adjustedNpcLocation = npcLocation.clone();
-                    adjustedNpcLocation.setY(npcLocation.getY() + (baseEyeHeight * npcData.getScale()));
-
-                    // Calculate direction from adjusted NPC eye position to player eye position
-                    Location playerEyeLocation = playerLocation.clone();
-                    playerEyeLocation.setY(playerLocation.getY() + player.getEyeHeight());
-
-                    Location newLoc = playerEyeLocation.clone();
-                    newLoc.setDirection(newLoc.subtract(adjustedNpcLocation).toVector());
-                    npc.lookAt(player, newLoc);
-                    // Setting NPC to be looking at the player and getting the value previously stored (or not) inside a map.
-                    Boolean wasPreviouslyLooking = npc.getIsLookingAtPlayer().put(player.getUniqueId(), true);
-                    // Comparing the previous state with current state to prevent event from being called continuously.
-                    if (wasPreviouslyLooking == null || !wasPreviouslyLooking) {
-                        // Calling NpcStartLookingEvent from the main thread.
-                        FancyNpcs.getInstance().getScheduler().runTask(null, () -> {
-                            new NpcStartLookingEvent(npc, player).callEvent();
-                        });
-                    }
-                    // Updating state if changed.
-                } else if (npcData.isTurnToPlayer() && npc.getIsLookingAtPlayer().getOrDefault(player.getUniqueId(), false)) {
-                    npc.getIsLookingAtPlayer().put(player.getUniqueId(), false);
-                    // Resetting to initial direction, if configured.
-                    if (FancyNpcs.getInstance().getFancyNpcConfig().isTurnToPlayerResetToInitialDirection()) {
-                        npc.move(player, false);
-                    }
-                    // Calling NpcStopLookingEvent from the main thread.
-                    FancyNpcs.getInstance().getScheduler().runTask(null, () -> {
-                        new NpcStopLookingEvent(npc, player).callEvent();
-                    });
-                }
+    void update(Npc npc, Player player, UUID id, Location viewerLocation, double eyeHeight) {
+        var data = npc.getData();
+        var npcLocation = data.getLocation();
+        boolean shownHere = npc.isShownFor(player) && npcLocation != null
+                && npcLocation.getWorld() == viewerLocation.getWorld();
+        int configuredDistance = data.getTurnToPlayerDistance();
+        int distance = configuredDistance == -1 ? plugin.getFancyNpcConfig().getTurnToPlayerDistance() : configuredDistance;
+        if (shownHere && data.isTurnToPlayer() && distance > 0
+                && npcLocation.distanceSquared(viewerLocation) < (double) distance * distance) {
+            Location direction = viewerLocation.clone().add(0, eyeHeight, 0)
+                    .subtract(npcLocation.getX(), npcLocation.getY() + getEntityEyeHeight(data.getType()) * data.getScale(), npcLocation.getZ());
+            direction.setDirection(direction.toVector());
+            npc.lookAt(player, direction);
+            if (!Boolean.TRUE.equals(npc.getIsLookingAtPlayer().put(id, true))) {
+                plugin.getScheduler().runTask(null, () -> new NpcStartLookingEvent(npc, player).callEvent());
             }
+        } else if (Boolean.TRUE.equals(npc.getIsLookingAtPlayer().remove(id))) {
+            if (shownHere && plugin.getFancyNpcConfig().isTurnToPlayerResetToInitialDirection()) {
+                npc.move(player, false);
+            }
+            plugin.getScheduler().runTask(null, () -> new NpcStopLookingEvent(npc, player).callEvent());
         }
     }
 

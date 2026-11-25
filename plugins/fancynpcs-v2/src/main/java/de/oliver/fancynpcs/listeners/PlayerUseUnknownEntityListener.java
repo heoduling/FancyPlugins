@@ -17,6 +17,7 @@ public class PlayerUseUnknownEntityListener implements Listener {
 
     @EventHandler
     public void onPlayerUseUnknownEntity(PlayerUseUnknownEntityEvent event) {
+        if (FancyNpcs.getInstance().getNpcThread().isShutdown()) return;
         Player player = event.getPlayer();
         Npc npc = FancyNpcs.getInstance().getNpcManagerImpl().getNpc(event.getEntityId());
 

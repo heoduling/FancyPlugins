@@ -1,10 +1,12 @@
 package de.oliver.fancynpcs.commands.npc;
 
 import de.oliver.fancylib.translations.Translator;
+import de.oliver.fancylib.translations.message.SimpleMessage;
 import de.oliver.fancynpcs.FancyNpcs;
 import de.oliver.fancynpcs.api.Npc;
 import de.oliver.fancynpcs.api.actions.ActionTrigger;
 import de.oliver.fancynpcs.api.actions.NpcAction;
+import de.oliver.fancynpcs.api.actions.types.UnknownActionAction;
 import org.bukkit.command.CommandSender;
 import org.incendo.cloud.annotation.specifier.Greedy;
 import org.incendo.cloud.annotations.Argument;
@@ -151,7 +153,14 @@ public enum ActionCMD {
         }
 
         List<NpcAction.NpcActionData> currentActions = npc.getData().getActions(trigger);
-        currentActions.add(Math.clamp(index, 0, currentActions.size() + 1), new NpcAction.NpcActionData(index, actionType, value));
+        if (index < 1 || index > currentActions.size()) {
+            translator.translate("npc_action_set_failure")
+                    .withPrefix()
+                    .replaceStripped("number", String.valueOf(index))
+                    .send(sender);
+            return;
+        }
+        currentActions.add(index, new NpcAction.NpcActionData(index, actionType, value));
 
         npc.getData().setActions(trigger, reorderActions(currentActions));
         translator.translate("npc_action_add_after_success")
@@ -332,9 +341,14 @@ public enum ActionCMD {
 
         for (int i = 0; i < actions.size(); i++) {
             NpcAction.NpcActionData action = actions.get(i);
+            String actionName = action.action() instanceof UnknownActionAction unresolved
+                    ? unresolved.getUnknownActionName() : action.action().getName();
+            if (FancyNpcs.getInstance().getActionManager().getActionByName(actionName) == null) {
+                actionName += " (" + ((SimpleMessage) translator.translate("unknown")).getMessage() + ")";
+            }
             translator.translate("npc_action_list_entry")
                     .replaceStripped("number", String.valueOf(action.order()))
-                    .replaceStripped("action", action.action().getName())
+                    .replaceStripped("action", actionName)
                     .replaceStripped("value", action.value() != null ? action.value() : "")
                     .send(sender);
         }

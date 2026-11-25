@@ -26,6 +26,12 @@ public enum RemoveCMD {
     ) {
         // Calling the event and removing the NPC if not cancelled.
         if (new NpcRemoveEvent(npc, sender).callEvent()) {
+            var manager = FancyNpcs.getInstance().getNpcManagerImpl();
+            var removal = manager.removeNpcAsync(npc);
+            if (removal == null) {
+                translator.translate("npc_remove_unavailable").withPrefix().send(sender);
+                return;
+            }
             npc.removeForAll();
             // Iterating over all online players that the NPC is currently looking at.
             for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
@@ -36,8 +42,10 @@ public enum RemoveCMD {
                     new NpcStopLookingEvent(npc, onlinePlayer).callEvent();
                 }
             }
-            FancyNpcs.getInstance().getNpcManagerImpl().removeNpc(npc);
-            translator.translate("npc_remove_success").withPrefix().replace("npc", npc.getData().getName()).send(sender);
+            String name = npc.getData().getName();
+            manager.replyWhenStored(sender, removal,
+                    () -> translator.translate("npc_remove_success").withPrefix().replace("npc", name).send(sender),
+                    () -> translator.translate("npc_remove_storage_failure").withPrefix().replaceStripped("npc", name).send(sender));
         } else {
             translator.translate("command_npc_modification_cancelled").withPrefix().send(sender);
         }

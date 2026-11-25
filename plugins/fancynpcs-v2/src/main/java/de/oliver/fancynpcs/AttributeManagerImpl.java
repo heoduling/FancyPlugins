@@ -12,29 +12,24 @@ import de.oliver.fancynpcs.v26_3.attributes.Attributes_26_3;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.EntityType;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class AttributeManagerImpl implements AttributeManager {
 
-    private List<NpcAttribute> attributes;
+    private final List<NpcAttribute> attributes;
 
     public AttributeManagerImpl() {
-        this.attributes = new ArrayList<>();
-        init();
-    }
-
-    private void init() {
-        String mcVersion = Bukkit.getMinecraftVersion();
-        switch (mcVersion) {
-            case "26.3" -> attributes = Attributes_26_3.getAllAttributes();
-            case "26.2" -> attributes = Attributes_26_2.getAllAttributes();
-            case "26.1.2" -> attributes = Attributes_26_1_1.getAllAttributes();
-            case "1.21.11" -> attributes = Attributes_1_21_11.getAllAttributes();
-            case "1.21.9", "1.21.10" -> attributes = Attributes_1_21_9.getAllAttributes();
-            case "1.21.6", "1.21.7", "1.21.8" -> attributes = Attributes_1_21_6.getAllAttributes();
-            case "1.21.5" -> attributes = Attributes_1_21_5.getAllAttributes();
-        }
+        attributes = new CopyOnWriteArrayList<>(switch (Bukkit.getMinecraftVersion()) {
+            case "26.3" -> Attributes_26_3.getAllAttributes();
+            case "26.2" -> Attributes_26_2.getAllAttributes();
+            case "26.1.2" -> Attributes_26_1_1.getAllAttributes();
+            case "1.21.11" -> Attributes_1_21_11.getAllAttributes();
+            case "1.21.9", "1.21.10" -> Attributes_1_21_9.getAllAttributes();
+            case "1.21.6", "1.21.7", "1.21.8" -> Attributes_1_21_6.getAllAttributes();
+            case "1.21.5" -> Attributes_1_21_5.getAllAttributes();
+            default -> List.of();
+        });
     }
 
     @Override

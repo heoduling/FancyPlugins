@@ -13,6 +13,7 @@ import de.oliver.fancyanalytics.logger.appender.JsonAppender;
 import de.oliver.fancyanalytics.logger.properties.ThrowableProperty;
 import de.oliver.fancyanalytics.sdk.events.Event;
 import de.oliver.fancylib.FancyLib;
+import de.oliver.fancylib.FileUtils;
 import de.oliver.fancylib.Metrics;
 import de.oliver.fancylib.VersionConfig;
 import de.oliver.fancylib.logging.PluginMiddleware;
@@ -28,6 +29,7 @@ import de.oliver.fancylib.versionFetcher.VersionFetcher;
 import de.oliver.fancynpcs.api.FancyNpcsPlugin;
 import de.oliver.fancynpcs.api.Npc;
 import de.oliver.fancynpcs.api.NpcData;
+import de.oliver.fancynpcs.api.NpcExtension;
 import de.oliver.fancynpcs.api.NpcManager;
 import de.oliver.fancynpcs.api.actions.types.*;
 import de.oliver.fancynpcs.api.skins.SkinData;
@@ -43,8 +45,8 @@ import de.oliver.fancynpcs.skins.mineskin.MineSkinQueue;
 import de.oliver.fancynpcs.skins.mojang.MojangQueue;
 import de.oliver.fancynpcs.skins.uuidcache.UUIDFileCache;
 import de.oliver.fancynpcs.tests.PlaceholderApiEnv;
-import de.oliver.fancynpcs.tracker.TurnToPlayerTracker;
 import de.oliver.fancynpcs.tracker.VisibilityTracker;
+import de.oliver.fancynpcs.utils.FancyAnalyticsCleanup;
 import de.oliver.fancynpcs.utils.OldSkinCacheMigrator;
 import de.oliver.fancynpcs.v1_21_11.Npc_1_21_11;
 import de.oliver.fancynpcs.v1_21_5.Npc_1_21_5;
@@ -56,7 +58,9 @@ import de.oliver.fancynpcs.v26_3.Npc_26_3;
 import de.oliver.fancysitula.api.utils.ServerVersion;
 import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.EntityType;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -66,6 +70,7 @@ import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -73,6 +78,8 @@ import java.util.function.Function;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 
 public class FancyNpcs extends JavaPlugin implements FancyNpcsPlugin {
+    static final String DEFAULT_LANGUAGE = "zh_CN";
+    private static final String STOCK_ZH_CN_370_13_SHA256 = "4454158177b2451ac71c3ff977600aa94692e034fc8bcaf4ef184a30f622386e";
 
     public static final FeatureFlag PLAYER_NPCS_FEATURE_FLAG = new FeatureFlag("player-npcs", "Every player can only manage the npcs they have created", false);
     public static final FeatureFlag USE_NATIVE_THREADS_FEATURE_FLAG = new FeatureFlag("use-native-threads", "Use native threads instead of virtual threads.", false);
@@ -89,6 +96,9 @@ public class FancyNpcs extends JavaPlugin implements FancyNpcsPlugin {
     private final FeatureFlagConfig featureFlagConfig;
     private final VersionFetcher versionFetcher;
     private final FancyAnalyticsAPI fancyAnalytics;
+    private Metrics metrics;
+    private HotUnload hotUnload;
+    private final ExtensionRegistry extensions = new ExtensionRegistry(this);
     private CloudCommandManager commandManager;
     private TextConfig textConfig;
     private Translator translator;
@@ -226,11 +236,7 @@ public class FancyNpcs extends JavaPlugin implements FancyNpcsPlugin {
                 "<color:#ba8813>[</color><gradient:#ffae00:#fffb00:#ffae00>FancyNpcs</gradient><color:#ba8813>]</color> <gray>"
         );
         translator = new Translator(textConfig);
-        translator.loadLanguages(getDataFolder().getAbsolutePath());
-        final Language selectedLanguage = translator.getLanguages().stream()
-                .filter(language -> language.getLanguageName().equals(config.getLanguage()))
-                .findFirst().orElse(translator.getFallbackLanguage());
-        translator.setSelectedLanguage(selectedLanguage);
+        loadTranslations();
 
         versionConfig.load();
 
@@ -269,14 +275,22 @@ public class FancyNpcs extends JavaPlugin implements FancyNpcsPlugin {
         usingPlotSquared = pluginManager.isPluginEnabled("PlotSquared");
 
         // register listeners
+        visibilityTracker = new VisibilityTracker(this);
         pluginManager.registerEvents(new PlayerJoinListener(), instance);
         pluginManager.registerEvents(new PlayerQuitListener(), instance);
         pluginManager.registerEvents(new PlayerTeleportListener(), instance);
         pluginManager.registerEvents(new PlayerChangedWorldListener(), instance);
+        pluginManager.registerEvents(npcManager, this);
         pluginManager.registerEvents(skinManager, instance);
         pluginManager.registerEvents(new PlayerLoadedListener(), this);
 
         pluginManager.registerEvents(new PlayerUseUnknownEntityListener(), instance);
+        pluginManager.registerEvents(extensions, this);
+
+        if (ServerSoftware.isFolia() && Bukkit.getMinecraftVersion().equals("26.2")) {
+            hotUnload = new HotUnload(this);
+            pluginManager.registerEvents(hotUnload, this);
+        }
 
         if (PLAYER_NPCS_FEATURE_FLAG.isEnabled()) {
             pluginManager.registerEvents(new PlayerNpcsListener(), instance);
@@ -286,12 +300,13 @@ public class FancyNpcs extends JavaPlugin implements FancyNpcsPlugin {
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
 
         // load config
-        scheduler.runTaskLater(null, 20L * 5, () -> npcManager.loadNpcs());
+        scheduler.runTaskLater(null, 20L * 5, () -> {
+            if (!npcThread.isShutdown() && !npcManager.isLoaded()) {
+                npcManager.loadNpcs();
+            }
+        });
 
-        visibilityTracker = new VisibilityTracker();
-
-        npcThread.scheduleAtFixedRate(new TurnToPlayerTracker(), 0, 50, TimeUnit.MILLISECONDS);
-        npcThread.scheduleAtFixedRate(visibilityTracker, 0, (config.getNpcUpdateVisibilityInterval() * 50L), TimeUnit.MILLISECONDS);
+        npcThread.scheduleWithFixedDelay(visibilityTracker, 0, 50, TimeUnit.MILLISECONDS);
 
         int autosaveInterval = config.getAutoSaveInterval();
         if (config.isEnableAutoSave() && config.getAutoSaveInterval() > 0) {
@@ -333,6 +348,13 @@ public class FancyNpcs extends JavaPlugin implements FancyNpcsPlugin {
                     .registerArguments()
                     .registerExceptionHandlers()
                     .registerCommands();
+            if (hotUnload != null) {
+                Bukkit.getGlobalRegionScheduler().execute(this, () -> {
+                    if (!npcThread.isShutdown()) {
+                        NpcCommandHelp.register(this);
+                    }
+                });
+            }
         } else {
             getLogger().warning("Commands and related components have not been registered. This can be changed by setting 'register_commands' to true, and restarting the server.");
         }
@@ -347,21 +369,54 @@ public class FancyNpcs extends JavaPlugin implements FancyNpcsPlugin {
     @Override
     public void onDisable() {
         getServer().getMessenger().unregisterOutgoingPluginChannel(this);
+        stopNpcWork();
+        if (metrics != null) {
+            metrics.shutdown();
+            metrics = null;
+        }
+        try {
+            if (npcManager != null) {
+                npcManager.closeStorage();
+            }
+            fancyLogger.info("FancyNpcs has been disabled.");
+        } finally {
+            extensions.closeAll();
+            if (hotUnload != null) {
+                hotUnload.close();
+                if (commandManager != null && !Bukkit.isStopping()) {
+                    NpcCommandHelp.detach(this);
+                }
+            }
+            FancyAnalyticsCleanup.close(fancyAnalytics, getLogger(), Bukkit.getLogger(), Bukkit.isStopping());
+        }
+    }
+
+    void stopNpcWork() {
+        npcThread.shutdownNow().forEach(task -> {
+            if (task instanceof Future<?> future) {
+                future.cancel(false);
+            }
+        });
         if (commandManager != null) {
             SkinCMD.INSTANCE.shutdown();
         }
         if (skinManager != null) {
             skinManager.shutdown();
         }
-        if (npcManager != null) {
-            npcManager.saveNpcs(true);
-        }
+    }
 
-        fancyLogger.info("FancyNpcs has been disabled.");
+    public HotUnload getHotUnload() {
+        return hotUnload;
     }
 
     private void registerMetrics() {
-        Metrics metrics = new Metrics(this, 17543);
+        metrics = new Metrics(this, 17543, task -> {
+            if (ServerSoftware.isFolia()) {
+                Bukkit.getGlobalRegionScheduler().execute(this, task);
+            } else {
+                Bukkit.getScheduler().runTask(this, task);
+            }
+        });
         metrics.addCustomChart(new Metrics.SingleLineChart("total_npcs", () -> npcManager.getAllNpcs().size()));
         metrics.addCustomChart(new Metrics.SimplePie("update_notifications", () -> config.isMuteVersionNotification() ? "No" : "Yes"));
         metrics.addCustomChart(new Metrics.SimplePie("using_development_build", () -> versionConfig.isDevelopmentBuild() ? "Yes" : "No"));
@@ -578,6 +633,26 @@ public class FancyNpcs extends JavaPlugin implements FancyNpcsPlugin {
         return versionConfig;
     }
 
+    public void sendVersionInfo(CommandSender sender, boolean onlyIfOutdated) {
+        scheduler.runTaskAsynchronously(() -> {
+            ComparableVersion newest = versionFetcher.fetchNewestVersion();
+            if (newest == null) {
+                translator.translate("fancynpcs_version_unavailable").withPrefix().send(sender);
+            } else if (newest.compareTo(new ComparableVersion(versionConfig.getVersion())) > 0) {
+                translator.translate("fancynpcs_version_outdated").withPrefix()
+                        .replace("current_ver", versionConfig.getVersion())
+                        .replace("latest_ver", newest.toString())
+                        .replace("download_url", versionFetcher.getDownloadUrl())
+                        .send(sender);
+            } else if (!onlyIfOutdated) {
+                translator.translate("fancynpcs_version_latest").withPrefix()
+                        .replace("version", versionConfig.getVersion())
+                        .replace("hash", versionConfig.getCommitHash().substring(0, 7))
+                        .send(sender);
+            }
+        });
+    }
+
     public CloudCommandManager getCommandManager() {
         return commandManager;
     }
@@ -587,11 +662,40 @@ public class FancyNpcs extends JavaPlugin implements FancyNpcsPlugin {
         return translator;
     }
 
+    public void loadTranslations() {
+        String bundledLocale = "languages/" + DEFAULT_LANGUAGE + ".yml";
+        File locale = new File(getDataFolder(), bundledLocale);
+        if (!locale.isFile()) {
+            saveResource(bundledLocale, false);
+        } else if (STOCK_ZH_CN_370_13_SHA256.equals(FileUtils.getSHA256Checksum(locale))) {
+            saveResource(bundledLocale, true);
+        }
+        translator.loadLanguages(getDataFolder().getAbsolutePath());
+        String configuredLanguage = config.getLanguage();
+        String languageName = "default".equals(configuredLanguage) ? DEFAULT_LANGUAGE : configuredLanguage;
+        Language selected = translator.getLanguages().stream()
+                .filter(language -> language.getLanguageName().equals(languageName))
+                .findFirst().orElse(translator.getFallbackLanguage());
+        translator.setSelectedLanguage(selected);
+    }
+
     @Override
     public void registerCommand(Object command) {
         if (commandManager != null) {
             commandManager.getAnnotationParser().parse(command);
         }
+    }
+
+    @Override
+    public NpcExtension.Registration registerExtension(Plugin owner, NpcExtension extension) {
+        if (!extension.commands().isEmpty() && commandManager == null) {
+            throw new IllegalStateException("FancyNpcs commands are disabled");
+        }
+        return extensions.attach(owner, extension, commandManager == null ? Set.of() : commandManager.npcSubcommandNames());
+    }
+
+    public ExtensionRegistry getExtensions() {
+        return extensions;
     }
 
     public TextConfig getTextConfig() {
@@ -613,6 +717,11 @@ public class FancyNpcs extends JavaPlugin implements FancyNpcsPlugin {
 
     public VisibilityTracker getVisibilityTracker() {
         return visibilityTracker;
+    }
+
+    @Override
+    public void requestVisibilityCheck(Npc npc, org.bukkit.entity.Player player) {
+        visibilityTracker.refresh(player);
     }
 
     public boolean isUsingPlotSquared() {

@@ -37,6 +37,11 @@ public class MojangQueue implements SkinGenerationQueue {
         return INSTANCE;
     }
 
+    public void shutdown() {
+        scheduler.cancel(true);
+        api.shutdown();
+    }
+
     @Override
     public void run() {
         scheduler = SkinManagerImpl.EXECUTOR.scheduleWithFixedDelay(this::pollMany, 5, 1, TimeUnit.SECONDS);

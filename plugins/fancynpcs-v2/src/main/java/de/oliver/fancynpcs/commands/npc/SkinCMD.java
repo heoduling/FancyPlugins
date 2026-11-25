@@ -97,12 +97,12 @@ public enum SkinCMD {
             Throwable error
     ) {
         FancyNpcs plugin = FancyNpcs.getInstance();
-        if (!plugin.isEnabled()) {
+        if (!plugin.isEnabled() || plugin.getNpcThread().isShutdown()) {
             return;
         }
 
         plugin.getServer().getGlobalRegionScheduler().run(plugin, task -> {
-            if (!plugin.isEnabled()) {
+            if (!plugin.isEnabled() || plugin.getNpcThread().isShutdown()) {
                 return;
             }
 
